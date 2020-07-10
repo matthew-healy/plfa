@@ -36,3 +36,85 @@ _ =
     ≡⟨ cong suc (+-assoc m n p) ⟩ -- applying inductive case
         suc (m + (n + p))
     ≡⟨⟩ (suc m) + (n + p) ∎
+
+-- a lemma used to prove commutativity of +
++-identityʳ : ∀ (m : ℕ) → m + zero ≡ m
++-identityʳ zero =
+  begin zero + zero
+    ≡⟨⟩ zero ∎
++-identityʳ (suc m) =
+  begin suc m + zero
+    ≡⟨⟩ suc (m + zero)
+    ≡⟨ cong suc (+-identityʳ m) ⟩ -- applying inductive case
+        suc m ∎
+
+-- a lemma used to prove commutativity of +
++-suc : ∀ (m n : ℕ) → m + suc n ≡ suc (m + n)
++-suc zero n =
+  begin zero + suc n
+    ≡⟨⟩ suc n
+    ≡⟨⟩ suc (zero + n) ∎
++-suc (suc m) n =
+  begin suc m + suc n
+    ≡⟨⟩ suc (m + suc n)
+    ≡⟨ cong suc (+-suc m n) ⟩
+        suc (suc (m + n))
+    ≡⟨⟩ suc (suc m + n) ∎
+
+-- proof that + is commutative on ℕ
++-comm : ∀ (m n : ℕ) → m + n ≡ n + m
++-comm m zero =
+  begin m + zero
+    ≡⟨ +-identityʳ m ⟩
+        m
+    ≡⟨⟩ zero + m ∎
++-comm m (suc n) =
+  begin m + (suc n)
+    ≡⟨ +-suc m n ⟩
+        suc (m + n)
+    ≡⟨ cong suc (+-comm m n) ⟩
+        suc (n + m)
+    ≡⟨⟩ suc n + m ∎
+
++-rearrange : ∀ (m n p q : ℕ) → (m + n) + (p + q) ≡ m + (n + p) + q
++-rearrange m n p q =
+  begin
+    (m + n) + (p + q)
+  ≡⟨ +-assoc m n (p + q) ⟩
+    m + (n + (p + q))
+  ≡⟨ cong (m +_) (sym (+-assoc n p q)) ⟩
+    m + ((n + p) + q)
+  ≡⟨ sym (+-assoc m (n + p) q) ⟩
+    (m + (n + p)) + q
+  ∎
+
+-- Exercise: finite-+-assoc (stretch)
+-- In the beginning we know nothing about associativity.
+-- On the first day, we know 0.
+-- 0 : ℕ
+-- On the second day, we know 1 and associativity of sums yielding 0.
+-- 1 : ℕ
+-- (0 + 0) + 0 = 0 + (0 + 0)
+-- On the third day, we know 2 and associativity of sums yielding 1.
+-- 2 : ℕ
+-- (1 + 0) + 0 = 1 + (0 + 0), (0 + 1) + 0 = 0 + (1 + 0), (0 + 0) + 1 = 0 + (0 + 1)
+-- On the fourth day, we know 3 and associativity of sums yielding 2.
+-- 3 : ℕ
+-- (2 + 0) + 0 = 2 + (0 + 0), (0 + 2) + 0 = 0 + (2 + 0), (0 + 0) + 2 = 0 + (0 + 2),
+-- (1 + 1) + 0 = 1 + (1 + 0), (1 + 0) + 1 = 1 + (0 + 1), (0 + 1) + 1 =  0 + (1 + 1)
+
++-assoc' : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
++-assoc' zero n p = refl
++-assoc' (suc m) n p rewrite +-assoc' m n p = {!   !}
+
++-identity' : ∀ (n : ℕ) → n + zero ≡ n
++-identity' zero = refl
++-identity' (suc n) rewrite +-identity' n = refl
+
++-suc' : ∀ (m n : ℕ) → m + suc n ≡ suc (m + n)
++-suc' zero n = refl
++-suc' (suc m) n rewrite +-suc' m n = refl
+
++-comm' : ∀ (m n : ℕ) → m + n ≡ n + m
++-comm' m zero rewrite +-identity' m = refl
++-comm' m (suc n) rewrite +-suc' m n | +-comm' m n = refl
