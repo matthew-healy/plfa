@@ -1,0 +1,1 @@
+This repository contains notes I took and exercises I completed while working through [Programming Language Foundations in Agda](https://plfa.github.io/).
