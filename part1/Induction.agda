@@ -105,7 +105,7 @@ _ =
 
 +-assoc' : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
 +-assoc' zero n p = refl
-+-assoc' (suc m) n p rewrite +-assoc' m n p = {!   !}
++-assoc' (suc m) n p rewrite +-assoc' m n p = refl
 
 +-identity' : ∀ (n : ℕ) → n + zero ≡ n
 +-identity' zero = refl
@@ -118,3 +118,46 @@ _ =
 +-comm' : ∀ (m n : ℕ) → m + n ≡ n + m
 +-comm' m zero rewrite +-identity' m = refl
 +-comm' m (suc n) rewrite +-suc' m n | +-comm' m n = refl
+
+-- Exercise +-swap
++-swap : ∀ (m n p : ℕ) → m + (n + p) ≡ n + (m + p)
++-swap m n p =
+  begin
+    m + (n + p)
+  ≡⟨ sym (+-assoc m n p) ⟩
+    (m + n) + p
+  ≡⟨ cong (_+ p) (+-comm m n) ⟩
+    (n + m) + p
+  ≡⟨ +-assoc n m p ⟩
+    n + (m + p)
+  ∎
+
++-swap' : ∀ (m n p : ℕ) → m + (n + p) ≡ n + (m + p)
++-swap' m n p rewrite sym (+-assoc m n p) | +-comm m n | +-assoc n m p = refl
+
+-- Exercise *-distrib-+
+*-distrib-+ : ∀ (m n p : ℕ) → (m + n) * p ≡ m * p + n * p
+*-distrib-+ zero n p = refl
+*-distrib-+ (suc m) n p rewrite *-distrib-+ m n p | sym (+-assoc p (m * p) (n * p)) = refl
+
+-- Exercise: *-assoc
+*-assoc : ∀ (m n p : ℕ) → (m * n) * p ≡ m * (n * p)
+*-assoc zero n p = refl
+*-assoc (suc m) n p rewrite *-distrib-+ n (m * n) p | *-assoc m n p = refl
+
+-- Exercise: *-comm
+*-nullity : ∀ (n : ℕ) → n * zero ≡ zero
+*-nullity zero = refl
+*-nullity (suc n) rewrite *-nullity n = refl
+
+*-suc : ∀ (m n : ℕ) → m * suc n ≡ m + m * n
+*-suc zero n = refl
+*-suc (suc m) n
+  rewrite *-suc m n
+  | sym (+-assoc n m (m * n))
+  | +-comm n m
+  | (+-assoc m n (m * n)) = refl
+
+*-comm : ∀ (m n : ℕ) → m * n ≡ n * m
+*-comm zero n rewrite *-nullity n = refl
+*-comm (suc m) n rewrite *-comm m n | *-suc n m = refl
