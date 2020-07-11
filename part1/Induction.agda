@@ -161,3 +161,15 @@ _ =
 *-comm : ∀ (m n : ℕ) → m * n ≡ n * m
 *-comm zero n rewrite *-nullity n = refl
 *-comm (suc m) n rewrite *-comm m n | *-suc n m = refl
+
+-- Exercise: zero-monus-n
+zero-monus-n : ∀ (n : ℕ) → 0 ∸ n ≡ 0
+zero-monus-n zero = refl
+zero-monus-n (suc n) = refl
+-- I think induction is required... I can't see how we'd rewrite it without it.
+
+-- Exercise: ∸-+-assoc
+∸-+-assoc : ∀ (m n p : ℕ) → m ∸ n ∸ p ≡ m ∸ (n + p)
+∸-+-assoc zero n p rewrite zero-monus-n n | zero-monus-n p | zero-monus-n (n + p) = refl
+∸-+-assoc (suc m) zero p = refl
+∸-+-assoc (suc m) (suc n) p rewrite ∸-+-assoc m n p = refl
