@@ -3,7 +3,7 @@ module plfa.part1.Induction where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; _≡⟨_⟩_; _∎)
-open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _^_)
 
 -- Exercise: operators
 -- Set union and intersection on P = Powerset({0, 1, 2})
@@ -173,3 +173,64 @@ zero-monus-n (suc n) = refl
 ∸-+-assoc zero n p rewrite zero-monus-n n | zero-monus-n p | zero-monus-n (n + p) = refl
 ∸-+-assoc (suc m) zero p = refl
 ∸-+-assoc (suc m) (suc n) p rewrite ∸-+-assoc m n p = refl
+
+-- Exercise: +*^
+
+^-distribˡ-+-* : ∀ (m n p : ℕ) → m ^ (n + p) ≡ (m ^ n) * (m ^ p)
+^-distribˡ-+-* m zero p rewrite +-identity' (m ^ p) = refl
+^-distribˡ-+-* m (suc n) p rewrite ^-distribˡ-+-* m n p | *-assoc m (m ^ n) (m ^ p) = refl
+
+^-distribʳ-* : ∀ (m n p : ℕ) → (m * n) ^ p ≡ (m ^ p) * (n ^ p)
+^-distribʳ-* m n zero = refl
+^-distribʳ-* m n (suc p)
+  rewrite ^-distribʳ-* m n p
+  | *-assoc m n ((m ^ p) * (n ^ p))
+  | *-comm n ((m ^ p) * (n ^ p))
+  | *-assoc (m ^ p) (n ^ p) n
+  | *-comm (n ^ p) n
+  | *-assoc m (m ^ p) (n * (n ^ p))= refl
+
+^-*-assoc : ∀ (m n p : ℕ) → (m ^ n) ^ p ≡ m ^ (n * p)
+^-*-assoc m n zero rewrite *-nullity n = refl
+^-*-assoc m n (suc p)
+  rewrite ^-*-assoc m n p
+  | sym (^-distribˡ-+-* m n (n * p))
+  | *-comm n p
+  | *-comm (suc p) n = refl
+
+-- Exercise: Bin-laws
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (b O) = (b I)
+inc (b I) = (inc b) O
+
+to : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩    = zero
+from (n O) = 2 * (from n)
+from (n I) = 1 + 2 * (from n)
+
+-- First proposition
+inc-suc-equiv : ∀ (b : Bin) → from (inc b) ≡ suc (from b)
+inc-suc-equiv ⟨⟩ = refl
+inc-suc-equiv (b O) = refl
+inc-suc-equiv (b I)
+  rewrite inc-suc-equiv b
+  | +-identity' (from b)
+  | +-comm' (from b) (suc (from b)) = refl
+
+-- to (from b) ≡ b
+-- Not true. Counter example: from (to ⟨⟩OI) ≡ ⟨⟩I.
+
+-- from (to n) ≡ n
+from-to-inverse : ∀ (n : ℕ) → from (to n) ≡ n
+from-to-inverse zero = refl
+from-to-inverse (suc n) rewrite inc-suc-equiv (to n) | from-to-inverse n = refl
