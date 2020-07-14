@@ -96,3 +96,20 @@ inv-z≤n z≤n = refl
 -- How can C-c C-l, C-c C-, and C-c C-r be leveraged to solve this?
 -- You need to make sure you name the evidence before you add the type hole.
 -- E.g. ≤-trans = ? won't work, but ≤-trans m≤n n≤p will.
+
+-- Antisymmetry of ≤
+≤-antisym : ∀ { m n : ℕ }
+  → m ≤ n
+  → n ≤ m
+    -----
+  → m ≡ n
+≤-antisym z≤n z≤n = refl
+≤-antisym (s≤s m≤n) (s≤s n≤m) = cong suc (≤-antisym m≤n n≤m)
+
+-- Exercise: ≤-antisym-cases
+-- The above proof omits cases where one argument is z≤n and one argument is s≤s.
+-- Why is it okay to omit them?
+--
+-- Let's assume m≤n is z≤n, and n≤m is s≤s. The first assumption suggests m is zero.
+-- However the second assumption suggests m is suc m′ for some m′ : ℕ. This is
+-- a contradiction, and thus we can discard this case.
