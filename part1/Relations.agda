@@ -206,3 +206,59 @@ data Total′ : ℕ → ℕ → Set where
     -------------
   → m * p ≤ n * q
 *-mono-≤ m n p q m≤n p≤q = ≤-trans (*-monoˡ-≤ m n p m≤n) (*-monoʳ-≤ n p q p≤q)
+
+-- Strict inequality
+
+infix 4 _<_
+
+data _<_ : ℕ → ℕ → Set where
+
+  z<s : ∀ { n : ℕ }
+      ------------
+    → zero < suc n
+
+  s<s : ∀ { m n : ℕ }
+    → m < n
+      -------------
+    → suc m < suc n
+
+-- Exercise: <-trans
+
+<-trans : ∀ { m n p : ℕ }
+  → m < n
+  → n < p
+    -----
+  → m < p
+<-trans z<s (s<s n<p) = z<s
+<-trans (s<s m<n) (s<s n<p) = s<s (<-trans m<n n<p)
+
+-- Execise: trichotomy
+
+_>_ : ℕ → ℕ → Set
+m > n = n < m
+
+data Trichotomy (m n : ℕ) : Set where
+
+  less :
+      m < n
+      --------------
+    → Trichotomy m n
+
+  equal :
+      m ≡ n
+      --------------
+    → Trichotomy m n
+
+  more :
+      m > n
+      -----
+    → Trichotomy m n
+
+<-trichotomy : ∀ (m n : ℕ) → Trichotomy m n
+<-trichotomy zero zero = equal refl
+<-trichotomy zero (suc n) = less z<s
+<-trichotomy (suc m) zero = more z<s
+<-trichotomy (suc m) (suc n) with <-trichotomy m n -- "Switch on the evidence for Trichotomy m n"
+...                             | equal m≡n = equal (cong suc m≡n)
+...                             | less m<n = less ( s<s m<n)
+...                             | more n>m = more (s<s n>m)
