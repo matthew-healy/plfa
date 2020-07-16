@@ -262,3 +262,71 @@ data Trichotomy (m n : ℕ) : Set where
 ...                             | equal m≡n = equal (cong suc m≡n)
 ...                             | less m<n = less ( s<s m<n)
 ...                             | more n>m = more (s<s n>m)
+
+-- Exercise: +-mono-<
+
++-monoʳ-< : ∀ (n p q : ℕ)
+  → p < q
+    -------------
+  → n + p < n + q
++-monoʳ-< zero p q p<q = p<q
++-monoʳ-< (suc n) p q p<q = s<s (+-monoʳ-< n p q p<q)
+
++-monoˡ-< : ∀ (m n p : ℕ)
+  → m < n
+    -------------
+  → m + p < n + p
++-monoˡ-< m n p m<n rewrite +-comm m p | +-comm n p = +-monoʳ-< p m n m<n
+
++-mono-< : ∀ (m n p q : ℕ)
+  → m < n
+  → p < q
+    -----
+  → m + p < n + q
++-mono-< m n p q m<n p<q = <-trans (+-monoʳ-< m p q p<q) (+-monoˡ-< m n q m<n)
+
+-- Exercise: ≤-iff-<
+
+s≤→< : ∀ { m n : ℕ }
+  → suc m ≤ n
+    ---------
+  → m < n
+s≤→< (s≤s m≤n) = n<s m≤n where
+
+  n<s : ∀ { m n : ℕ }
+    → m ≤ n
+      -----
+    → m < suc n
+  n<s z≤n = z<s
+  n<s (s≤s m≤n) = s<s (n<s m≤n)
+
+<→s≤ : ∀ { m n : ℕ }
+  → m < n
+    ---------
+  → suc m ≤ n
+<→s≤ z<s = s≤s z≤n
+<→s≤ (s<s m<n) = s≤s (s≤n m<n) where
+
+  s≤n : ∀ { m n : ℕ }
+    → m < n
+      -----
+    → suc m ≤ n
+  s≤n z<s = s≤s z≤n
+  s≤n (s<s m<n) = s≤s (s≤n m<n)
+
+-- Exercise: <-trans-revisited
+
+-- Could this be improved?
+<-trans′ : ∀ { m n p : ℕ }
+  → m < n
+  → n < p
+    -----
+  → m < p
+<-trans′ m<n n<p = s≤→< (≤-trans (<→s≤ m<n) (<→≤ n<p)) where
+
+  <→≤ : ∀ { m n : ℕ }
+    → m < n
+      -----
+    → m ≤ n
+  <→≤ z<s = z≤n
+  <→≤ (s<s m<n) = s≤s (<→≤ m<n)
