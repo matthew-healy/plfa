@@ -330,3 +330,51 @@ s≤→< (s≤s m≤n) = n<s m≤n where
     → m ≤ n
   <→≤ z<s = z≤n
   <→≤ (s<s m<n) = s≤s (<→≤ m<n)
+
+-- Even and Odd
+
+data even : ℕ → Set
+data odd  : ℕ → Set
+
+data even where
+
+  zero :
+      ---------
+      even zero
+
+  suc  : ∀ { n : ℕ }
+    → odd n
+      ------------
+    → even (suc n)
+
+data odd where
+
+  suc  : ∀ { n : ℕ }
+    → even n
+      -----------
+    → odd (suc n)
+
+e+e≡e : ∀ { m n : ℕ }
+  → even m
+  → even n
+    ------------
+  → even (m + n)
+
+o+e≡o : ∀ { m n : ℕ }
+  → odd m
+  → even n
+    -----------
+  → odd (m + n)
+
+e+e≡e zero en = en
+e+e≡e (suc om) en = suc (o+e≡o om en)
+
+o+e≡o (suc em) en = suc (e+e≡e em en)
+
+-- Exercise: o+o≡e
+o+o≡e : ∀ { m n : ℕ }
+  → odd m
+  → odd n
+    ------------
+  → even (m + n)
+o+o≡e (suc {m} em) (suc {n} en) rewrite +-comm m (suc n) = suc (suc (e+e≡e en em))
