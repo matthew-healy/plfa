@@ -2,8 +2,9 @@ module plfa.part1.Relations where
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
+open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; _≡⟨_⟩_; _∎)
 open import Data.Nat using (ℕ; zero; suc; _+_; _*_)
-open import Data.Nat.Properties using (+-comm; *-comm)
+open import Data.Nat.Properties using (+-comm; +-identityʳ; *-comm)
 
 data _≤_ : ℕ → ℕ → Set where
   z≤n : ∀ { n : ℕ }
@@ -378,3 +379,128 @@ o+o≡e : ∀ { m n : ℕ }
     ------------
   → even (m + n)
 o+o≡e (suc {m} em) (suc {n} en) rewrite +-comm m (suc n) = suc (suc (e+e≡e en em))
+
+-- Exercise: Bin-predicates
+
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (b O) = (b I)
+inc (b I) = (inc b) O
+
+to : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩    = zero
+from (n O) = 2 * (from n)
+from (n I) = 1 + 2 * (from n)
+
+-- One b holds if b has a leading I
+data One : Bin → Set where
+
+  ⟨⟩I :
+      ----------
+      One (⟨⟩ I)
+
+  _O : ∀ { b : Bin }
+    → One b
+      ---------
+    → One (b O)
+
+  _I : ∀ { b : Bin }
+    → One b
+      ---------
+    → One (b I)
+
+-- An arbitrary b is canonical iff it is ⟨⟩O or it has a leading one.
+data Can : Bin → Set where
+
+  zero :
+      ----------
+      Can (⟨⟩ O)
+
+  leading-one : ∀ { b : Bin }
+    → One b
+      -----
+    → Can b
+
+-- Increment preserves canonical bitstrings
+
+inc-one : ∀ { b : Bin }
+  → One b
+    -----
+  → One (inc b)
+inc-one ⟨⟩I = ⟨⟩I O
+inc-one (ob O) = ob I
+inc-one (ob I) = inc-one ob O
+
+inc-can : ∀ { b : Bin }
+  → Can b
+    -----------
+  → Can (inc b)
+inc-can zero = leading-one ⟨⟩I
+inc-can (leading-one ob) = leading-one (inc-one ob)
+
+-- to always yields a canonical bitstring
+
+to-can : ∀ (n : ℕ) → Can (to n)
+to-can zero = zero
+to-can (suc n) = inc-can (to-can n)
+
+-- Converting a canonical bitstring to a natural and back is the identity
+
+0<ob : ∀ { b : Bin }
+  → One b
+    ------------
+  → 0 < (from b)
+0<ob ⟨⟩I = z<s
+0<ob (_O {b} ob) rewrite +-identityʳ (from b) = +-mono-< 0 (from b) 0 (from b) (0<ob ob) (0<ob ob)
+0<ob (ob I) = z<s
+
+to-2*n : ∀ { n : ℕ }
+  → 0 < n
+    -----
+  → to (n + n) ≡ (to n) O
+to-2*n {suc zero} z<s = refl
+to-2*n {suc (suc n)} z<s =
+ begin
+  inc (to (suc n + suc (suc n)) )
+ ≡⟨ cong inc (cong to (+-comm (suc n) (suc (suc n)))) ⟩
+  inc (inc (to (suc n + suc n)))
+ ≡⟨ cong inc (cong inc (to-2*n {suc n} z<s)) ⟩
+  (to (suc (suc n))) O
+ ∎
+
+-- Wow, this is a real ugly proof.
+can-id : ∀ { b : Bin }
+  → Can b
+    ---------------
+  → to (from b) ≡ b
+can-id zero = refl
+can-id (leading-one ⟨⟩I) = refl
+can-id (leading-one (_O {b} ob)) =
+  begin
+    to (from b + (from b + 0))
+  ≡⟨ cong to (cong (from b +_) (+-identityʳ (from b))) ⟩
+    to (from b + from b)
+  ≡⟨ to-2*n (0<ob ob) ⟩
+    (to (from b)) O
+  ≡⟨ cong _O (can-id (leading-one ob)) ⟩
+    b O
+  ∎
+can-id (leading-one (_I {b} ob)) =
+  begin
+    inc (to (from b + (from b + zero)))
+  ≡⟨ cong inc (cong to (cong (from b +_) (+-identityʳ (from b)))) ⟩
+    inc (to (from b + from b))
+  ≡⟨ cong inc (to-2*n (0<ob ob)) ⟩
+    inc ((to (from b)) O)
+  ≡⟨ cong inc (cong _O (can-id (leading-one ob))) ⟩
+    b I
+  ∎
