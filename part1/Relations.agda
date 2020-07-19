@@ -482,8 +482,10 @@ can-id : ∀ { b : Bin }
   → Can b
     ---------------
   → to (from b) ≡ b
+
 can-id zero = refl
 can-id (leading-one ⟨⟩I) = refl
+
 can-id (leading-one (_O {b} ob)) =
   begin
     to (from b + (from b + 0))
@@ -494,6 +496,7 @@ can-id (leading-one (_O {b} ob)) =
   ≡⟨ cong _O (can-id (leading-one ob)) ⟩
     b O
   ∎
+
 can-id (leading-one (_I {b} ob)) =
   begin
     inc (to (from b + (from b + zero)))
@@ -504,3 +507,21 @@ can-id (leading-one (_I {b} ob)) =
   ≡⟨ cong inc (cong _O (can-id (leading-one ob))) ⟩
     b I
   ∎
+
+-- Open question:
+-- Can I prove that One is equivalent to the def below and then use that
+-- to prove one-id more easily?
+
+{-
+data One : Bin → Set where
+
+  one : One (⟨⟩ I)
+  suc : ∀ { b : Bin } → One b → One (inc b)
+
+one-id : ∀ { b : Bin }
+  → One b
+    ---------------
+  → to (from b) ≡ b
+one-id one = refl
+one-id (suc {b} ob) rewrite inc-suc-equiv b = cong inc (one-id ob)
+-}
