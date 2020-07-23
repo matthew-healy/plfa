@@ -3,8 +3,8 @@ module plfa.part1.Isomorphism where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; cong-app)
 open Eq.≡-Reasoning
-open import Data.Nat using (ℕ; zero; suc; _+_)
-open import Data.Nat.Properties using (+-comm)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_)
+open import Data.Nat.Properties using (+-comm; +-identityʳ)
 
 -- Function composition
 _∘_ : ∀ {A B C : Set} → (B → C) → (A → B) → (A → C)
@@ -219,3 +219,92 @@ module ≲-Reasoning where
   A ≲-∎ = ≲-refl
 
 open ≲-Reasoning
+
+-- Exercise: ≃-implies-≲
+≃-implies-≲ : ∀ {A B : Set}
+  → A ≃ B
+    -----
+  → A ≲ B
+≃-implies-≲ A≃B = record
+  { to = to A≃B
+  ; from = from A≃B
+  ; from∘to = from∘to A≃B
+  }
+
+-- Exercise: _⇔_
+
+record _⇔_ (A B : Set) : Set where
+  field
+    to   : A → B
+    from : B → A
+
+⇔-refl : ∀ {A : Set} → A ⇔ A
+⇔-refl = record
+  { to   = λ x → x
+  ; from = λ x → x
+  }
+
+⇔-sym : ∀ {A B : Set}
+  → A ⇔ B
+    -----
+  → B ⇔ A
+⇔-sym A⇔B = record
+  { to   = _⇔_.from A⇔B
+  ; from = _⇔_.to A⇔B
+  }
+
+⇔-trans : ∀ {A B C : Set}
+  → A ⇔ B
+  → B ⇔ C
+    -----
+  → A ⇔ C
+⇔-trans A⇔B B⇔C = record
+  { to = λ x → _⇔_.to B⇔C (_⇔_.to A⇔B x)
+  ; from = λ x → _⇔_.from A⇔B (_⇔_.from B⇔C x)
+  }
+
+-- Exercise Bin-embedding
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (b O) = (b I)
+inc (b I) = (inc b) O
+
+ℕ-to-Bin : ℕ → Bin
+ℕ-to-Bin zero = ⟨⟩ O
+ℕ-to-Bin (suc n) = inc (ℕ-to-Bin n)
+
+ℕ-from-Bin : Bin → ℕ
+ℕ-from-Bin ⟨⟩    = zero
+ℕ-from-Bin (n O) = 2 * (ℕ-from-Bin n)
+ℕ-from-Bin (n I) = 1 + 2 * (ℕ-from-Bin n)
+
+inc-suc-equiv : ∀ (b : Bin) → ℕ-from-Bin (inc b) ≡ suc (ℕ-from-Bin b)
+inc-suc-equiv ⟨⟩ = refl
+inc-suc-equiv (b O) = refl
+inc-suc-equiv (b I)
+  rewrite inc-suc-equiv b
+  | +-identityʳ (ℕ-from-Bin b)
+  | +-comm (ℕ-from-Bin b) (suc (ℕ-from-Bin b)) = refl
+
+from-to-inverse : ∀ (n : ℕ) → ℕ-from-Bin (ℕ-to-Bin n) ≡ n
+from-to-inverse zero = refl
+from-to-inverse (suc n) rewrite inc-suc-equiv (ℕ-to-Bin n) | from-to-inverse n = refl
+
+ℕ-embeds-in-Bin : ℕ ≲ Bin
+ℕ-embeds-in-Bin = record
+  { to = ℕ-to-Bin
+  ; from = ℕ-from-Bin
+  ; from∘to = from-to-inverse
+  }
+
+-- ℕ-to-Bin and ℕ-from-Bin do not form an isomorpism because there are
+-- countably-infinitely many members of Bin which represent each ℕ.
+-- e.g. ⟨⟩ I, ⟨⟩ O I, ⟨⟩ O O I, ... all represent 1, which means:
+-- ℕ-to-Bin (ℕ-from-Bin ⟨⟩ O I) ≢ ⟨⟩ O I
+
+-- However the canonical representations of binary numbers are isomorphic to ℕ.
