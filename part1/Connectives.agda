@@ -166,3 +166,30 @@ infixr 1 _⊎_
                ; (inj₂ y) → refl
                }
   }
+
+-- False is empty
+
+data ⊥ : Set where
+  -- cannot be constructed
+
+⊥-elim : ∀ {A : Set} → ⊥ → A
+⊥-elim ()
+
+uniq-⊥ : ∀ {C : Set} (h : ⊥ → C) (w : ⊥) → ⊥-elim w ≡ h w
+uniq-⊥ h ()
+
+-- Exercise: ⊥-identityˡ
+⊥-identityˡ : ∀ {A : Set} → ⊥ ⊎ A ≃ A
+⊥-identityˡ = record
+  { to = λ{ (inj₂ x) → x }
+  ; from = λ{ x → inj₂ x }
+  ; from∘to = λ{ (inj₂ x) → refl }
+  ; to∘from = λ{ x → refl }
+  }
+
+-- Exercise: ⊥-identityʳ
+⊥-identityʳ : ∀ {A : Set} → A ⊎ ⊥ ≃ A
+⊥-identityʳ {A} = ≃-begin
+  (A ⊎ ⊥) ≃⟨ ⊎-comm ⟩
+  (⊥ ⊎ A) ≃⟨ ⊥-identityˡ ⟩
+  A ≃-∎
