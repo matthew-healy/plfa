@@ -127,3 +127,42 @@ uniq-⊎ h (inj₁ x) = refl
 uniq-⊎ h (inj₂ y) = refl
 
 infixr 1 _⊎_
+
+-- Exercise: ⊎-comm
+⊎-comm : ∀ {A B : Set} → A ⊎ B ≃ B ⊎ A
+⊎-comm = record
+  { to      = λ{ (inj₁ x) → inj₂ x
+               ; (inj₂ y) → inj₁ y
+               }
+  ; from    = λ{ (inj₁ y) → inj₂ y
+               ; (inj₂ x) → inj₁ x
+               }
+  ; from∘to = λ{ (inj₁ x) → refl
+               ; (inj₂ y) → refl
+               }
+  ; to∘from = λ{ (inj₁ y) → refl
+               ; (inj₂ x) → refl
+               }
+  }
+
+
+-- Exercise ⊎-assoc
+⊎-assoc : ∀ {A B C : Set} → A ⊎ (B ⊎ C) ≃ (A ⊎ B) ⊎ C
+⊎-assoc = record
+  { to      = λ{ (inj₁ x) → inj₁ (inj₁ x)
+               ; (inj₂ (inj₁ y)) → inj₁ (inj₂ y)
+               ; (inj₂ (inj₂ z)) → inj₂ z
+               }
+  ; from    = λ{ (inj₁ (inj₁ x)) → inj₁ x
+               ; (inj₁ (inj₂ y)) → inj₂ (inj₁ y)
+               ; (inj₂ z) → inj₂ (inj₂ z)
+               }
+  ; from∘to = λ{ (inj₁ x) → refl
+               ; (inj₂ (inj₁ y)) → refl
+               ; (inj₂ (inj₂ z)) → refl
+               }
+  ; to∘from = λ{ (inj₁ (inj₁ x)) → refl
+               ; (inj₁ (inj₂ y)) → refl
+               ; (inj₂ y) → refl
+               }
+  }
