@@ -233,3 +233,62 @@ currying = record
   ; from∘to = λ{ f → extensionality λ{ x → η-× (f x) }}
   ; to∘from = λ{ ⟨ f , g ⟩ → refl }
   }
+
+-- Distribution
+
+×-distrib-⊎ : ∀ {A B C : Set} → (A ⊎ B) × C ≃ (A × C) ⊎ (B × C)
+×-distrib-⊎ = record
+  { to      = λ{ ⟨ inj₁ x , z ⟩ → inj₁ ⟨ x , z ⟩
+               ; ⟨ inj₂ y , z ⟩ → inj₂ ⟨ y , z ⟩
+               }
+  ; from    = λ{ (inj₁ ⟨ x , z ⟩) → ⟨ inj₁ x , z ⟩
+               ; (inj₂ ⟨ y , z ⟩) → ⟨ inj₂ y , z ⟩
+               }
+  ; from∘to = λ{ ⟨ inj₁ x , z ⟩ → refl
+               ; ⟨ inj₂ y , z ⟩ → refl
+               }
+  ; to∘from = λ{  (inj₁ ⟨ x , z ⟩) → refl
+               ;  (inj₂ ⟨ y , z ⟩) → refl
+               }
+  }
+
+⊎-distrib-× : ∀ {A B C : Set} → (A × B) ⊎ C ≲ (A ⊎ C) × (B ⊎ C)
+⊎-distrib-× = record
+  { to      = λ{ (inj₁ ⟨ x , y ⟩) → ⟨ inj₁ x , inj₁ y ⟩
+               ; (inj₂ z)         → ⟨ inj₂ z , inj₂ z ⟩
+               }
+  ; from    = λ{ ⟨ inj₁ x , inj₁ y ⟩ → inj₁ ⟨ x , y ⟩
+               ; ⟨ inj₁ x , inj₂ z ⟩ → inj₂ z
+               ; ⟨ inj₂ z , _      ⟩ → inj₂ z
+               }
+  ; from∘to = λ{ (inj₁ ⟨ x , y ⟩) → refl
+               ; (inj₂ z) → refl
+               }
+  }
+
+-- Exercise: ⊎-weak-×
+⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+⊎-weak-× = λ{ ⟨ inj₁ x , z ⟩ → inj₁ x
+            ; ⟨ inj₂ y , z ⟩ → inj₂ ⟨ y , z ⟩
+            }
+
+-- weak law: (A ⊎ B) × C → A ⊎ (B × C)
+-- distributive law: (A ⊎ B) × C ≃ (A × C) ⊎ (B × C) ?
+
+-- Exercise: ⊎×-implies-×⊎
+⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
+⊎×-implies-×⊎ (inj₁ ⟨ a , b ⟩) = ⟨ inj₁ a , inj₁ b ⟩
+⊎×-implies-×⊎ (inj₂ ⟨ c , d ⟩) = ⟨ inj₂ c , inj₂ d ⟩
+
+-- ×⊎-implies-⊎× : ∀ {A B C D : Set} → (A ⊎ C) × (B ⊎ D) → (A × B) ⊎ (C × D)
+-- ×⊎-implies-⊎× ⟨ inj₁ a , inj₁ b ⟩ = inj₁ ⟨ a , b ⟩
+-- ×⊎-implies-⊎× ⟨ inj₁ a , inj₂ d ⟩ = ?
+-- ×⊎-implies-⊎× ⟨ inj₂ c , inj₁ b ⟩ = ?
+-- ×⊎-implies-⊎× ⟨ inj₂ c , inj₂ d ⟩ = inj₂ ⟨ c , d ⟩
+
+-- Seems likely the converse doesn't hold... counter example?
+
+-- (a + c) × (b + d) = ab + ad + cb + cd
+-- (a × b) + (c × d) = ab + cd
+-- Counter example: (⊤ ⊎ ⊥) × (⊤ ⊎ ⊥) does not imply (⊤ × ⊥) ⊎ (⊤ × ⊥)
+-- as the second type is uninhabited.
