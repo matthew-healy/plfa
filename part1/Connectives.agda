@@ -193,3 +193,43 @@ uniq-⊥ h ()
   (A ⊎ ⊥) ≃⟨ ⊎-comm ⟩
   (⊥ ⊎ A) ≃⟨ ⊥-identityˡ ⟩
   A ≃-∎
+
+-- Implication is function
+
+→-elim : ∀ {A B : Set}
+  → (A → B)
+  → A
+    -------
+  → B
+→-elim L M = L M
+
+η-→ : ∀ {A B : Set} (f : A → B) → (λ (x : A) → f x) ≡ f
+η-→ f = refl
+
+currying : ∀ {A B C : Set} → (A → B → C) ≃ (A × B → C)
+currying = record
+  { to      = λ{ f → λ{ ⟨ x , y ⟩ → f x y } }
+  ; from    = λ{ g → λ{ x → λ{ y → g ⟨ x , y ⟩ }}}
+  ; from∘to = λ{ f → refl }
+  ; to∘from = λ{ g → extensionality λ{ ⟨ x , y ⟩ → refl }}
+  }
+
+→-distrib-⊎ : ∀ {A B C : Set} → (A ⊎ B → C) ≃ ((A → C) × (B → C))
+→-distrib-⊎ = record
+  { to      = λ{ f → ⟨ (f ∘ inj₁) , (f ∘ inj₂) ⟩ }
+  ; from    = λ{ ⟨ f , g ⟩ → λ{ (inj₁ x) → f x
+                              ; (inj₂ y) → g y
+                              }}
+  ; from∘to = λ{ x → extensionality λ{ (inj₁ x) → refl
+                                     ; (inj₂ y) → refl
+                                     }}
+  ; to∘from = λ{ ⟨ f , g ⟩ → refl }
+  }
+
+→-distrib-× : ∀ {A B C : Set} → (A → B × C) ≃ (A → B) × (A → C)
+→-distrib-× = record
+  { to      = λ{ f → ⟨ proj₁ ∘ f , proj₂ ∘ f ⟩ }
+  ; from    = λ{ ⟨ f , g ⟩ → λ{ x → ⟨ f x , g x ⟩ }}
+  ; from∘to = λ{ f → extensionality λ{ x → η-× (f x) }}
+  ; to∘from = λ{ ⟨ f , g ⟩ → refl }
+  }
