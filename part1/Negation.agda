@@ -165,14 +165,7 @@ dne→dm ¬¬A→A ¬[¬A×¬B] = em→dm (dne→em ¬¬A→A) ¬[¬A×¬B]
 pl→em : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A : Set} → A ⊎ ¬ A
 pl→em ¬¬A→A = ¬¬A→A λ{ ¬[A⊎¬A] → ⊥-elim (em-irrefutable ¬[A⊎¬A]) }
 
-pl→dne : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A : Set} → (¬ ¬ A → A)
-pl→dne ¬¬A→A = em→dne (pl→em ¬¬A→A)
-
-pl→iad : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → (A → B) → ¬ A ⊎ B
-pl→iad ¬¬A→A A→B = em→iad (pl→em ¬¬A→A) A→B
-
-pl→dm : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → ¬(¬ A × ¬ B) → A ⊎ B
-pl→dm ¬¬A→A ¬[¬A×¬B] = em→dm (pl→em ¬¬A→A) ¬[¬A×¬B]
+-- em → all others, so we're done
 
 -- Implication as disjunction → others
 
