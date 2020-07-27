@@ -3,7 +3,7 @@ module plfa.part1.Negation where
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
-open import Data.Sum using (_⊎_; inj₁; inj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂; swap)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import plfa.part1.Isomorphism using (_≃_; _≲_; extensionality)
 open import plfa.part1.Relations using (_<_; z<s; s<s)
@@ -110,10 +110,93 @@ demorgan = →-distrib-⊎ {_} {_} {⊥}
 -- Do we also have ¬(A × B) ≃ (¬ A) ⊎ (¬ B)?
 -- ⊎ is xor, so does not encode the possibility that A and B might both be false.
 -- whereas × is and, so ¬[A×B] implies either ¬A, ¬B or both.
--- This prevents us from implementing from : ¬(A × B) → (¬ A) ⊎ (¬ B
+-- This prevents us from implementing from : ¬(A × B) → (¬ A) ⊎ (¬ B)
 
 -- Can prove: (¬ A) ⊎ (¬ B) → ¬(A × B)
 _ : ∀ {A B : Set} → (¬ A) ⊎ (¬ B) → ¬(A × B)
 _ = λ{ (inj₁ ¬A) (x , y) → ¬A x
      ; (inj₂ ¬B) (x , y) → ¬B y
      }
+
+-- Excluded middle is irrefutable
+postulate
+  em : ∀ {A : Set} → A ⊎ ¬ A
+
+em-irrefutable : ∀ {A : Set} → ¬ ¬ (A ⊎ ¬ A)
+em-irrefutable k = k (inj₂ λ{ x → k (inj₁ x) })
+
+-- Exercise: Classical
+
+-- Excluded middle → others
+em→dne : ∀ {A : Set} → A ⊎ ¬ A → (¬ ¬ A → A)
+em→dne (inj₁ x) ¬¬A = x
+em→dne (inj₂ y) ¬¬A = ⊥-elim (¬¬A y)
+
+em→pl : ∀ {A B : Set} → A ⊎ ¬ A → ((A → B) → A) → A
+em→pl (inj₁ x) [A→B]→A = x
+em→pl (inj₂ y) [A→B]→A = [A→B]→A λ{ x → ⊥-elim (y x) }
+
+em→iad : ∀ {A B : Set} → A ⊎ ¬ A → (A → B) → ¬ A ⊎ B
+em→iad (inj₁ a) A→B = inj₂ (A→B a)
+em→iad (inj₂ ¬a) A→B = inj₁ ¬a
+
+em→dm : (∀ {A : Set} → A ⊎ ¬ A) → ∀ {A B : Set} → ¬(¬ A × ¬ B) → A ⊎ B
+em→dm lem {A} {B} ¬[¬A×¬B] with lem {A} | lem {B}
+...                           | inj₁ x  |    y⊎¬y = inj₁ x
+...                           | inj₂ ¬x | inj₁  y = inj₂ y
+...                           | inj₂ ¬x | inj₂ ¬y = ⊥-elim (¬[¬A×¬B] (¬x , ¬y))
+
+-- Double negation elimination → others
+dne→em : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A : Set} → A ⊎ ¬ A
+dne→em ¬¬A→A = ¬¬A→A em-irrefutable
+
+-- Since em→ all others, and dne→em, we get that dne→ all the others
+
+dne→pl : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → ((A → B) → A) → A
+dne→pl ¬¬A→A [A→B]→A = em→pl (dne→em ¬¬A→A) [A→B]→A
+
+dne→iad : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → (A → B) → ¬ A ⊎ B
+dne→iad ¬¬A→A A→B = em→iad (dne→em ¬¬A→A) A→B
+
+dne→dm : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → ¬(¬ A × ¬ B) → A ⊎ B
+dne→dm ¬¬A→A ¬[¬A×¬B] = em→dm (dne→em ¬¬A→A) ¬[¬A×¬B]
+
+-- Pierce's law → others
+pl→em : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A : Set} → A ⊎ ¬ A
+pl→em ¬¬A→A = ¬¬A→A λ{ ¬[A⊎¬A] → ⊥-elim (em-irrefutable ¬[A⊎¬A]) }
+
+pl→dne : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A : Set} → (¬ ¬ A → A)
+pl→dne ¬¬A→A = em→dne (pl→em ¬¬A→A)
+
+pl→iad : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → (A → B) → ¬ A ⊎ B
+pl→iad ¬¬A→A A→B = em→iad (pl→em ¬¬A→A) A→B
+
+pl→dm : (∀ {A : Set} → ¬ ¬ A → A) → ∀ {A B : Set} → ¬(¬ A × ¬ B) → A ⊎ B
+pl→dm ¬¬A→A ¬[¬A×¬B] = em→dm (pl→em ¬¬A→A) ¬[¬A×¬B]
+
+-- Implication as disjunction → others
+
+iad→em : (∀ {A B : Set} → (A → B) → ¬ A ⊎ B) → ∀ {A : Set} → A ⊎ ¬ A
+iad→em iad = swap (iad λ{ x → x })
+
+-- em → all others, so we're done.
+
+-- DeMorgan's law → others
+
+dm→em : (∀ {A B : Set} → ¬(¬ A × ¬ B) → A ⊎ B) → ∀ {A : Set} → A ⊎ ¬ A
+dm→em dm = dm λ{ (¬a , ¬¬a) → ¬¬a ¬a }
+
+-- em → all others, so done
+
+-- Exercise: Stable
+
+Stable : Set → Set
+Stable A = ¬ ¬ A → A
+
+¬-stable : ∀ {A : Set} → Stable (¬ A)
+¬-stable = ¬¬¬-elim
+
+×-stable : ∀ {A B : Set} → Stable A → Stable B → Stable (A × B)
+×-stable ¬¬x→x ¬¬y→y ¬¬[A×B] =
+  (¬¬x→x λ{ ¬x → ¬¬[A×B] λ { xy → ¬x (proj₁ xy) }}) ,
+  (¬¬y→y λ{ ¬y → ¬¬[A×B] λ { xy → ¬y (proj₂ xy) }})
