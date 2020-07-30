@@ -217,3 +217,26 @@ a∸b+b≡a (suc a) (suc b) (s≤s b≤a) rewrite +-comm (a ∸ b) (suc b) | +-c
 
 ≤→∃+ : ∀ {y z : ℕ} → y ≤ z → ∃[ x ] (x + y ≡ z)
 ≤→∃+ {y} {z} y≤z = ⟨ z ∸ y , a∸b+b≡a z y y≤z ⟩
+
+-- Existentials, Universals, and Negation
+
+¬∃≃∀¬ : ∀ {A : Set} {B : A → Set}
+  → (¬ ∃[ x ] B x) ≃ ∀ x → ¬ B x
+¬∃≃∀¬ = record
+  { to      = λ{ ¬∃xy x y → ¬∃xy ⟨ x , y ⟩ }
+  ; from    = λ{ ∀¬xy ⟨ x , y ⟩ → ∀¬xy x y }
+  ; from∘to = λ{ ¬∃xy → extensionality λ{ ⟨ x , y ⟩ → refl } }
+  ; to∘from = λ{ ∀¬xy → refl }
+  }
+
+-- Exercise: ∃¬-implies-¬∀
+∃¬-implies-¬∀ : ∀ {A : Set} {B : A → Set} → ∃[ x ] (¬ B x) → ¬ (∀ x → B x)
+∃¬-implies-¬∀ = λ{ ⟨ x , ¬y ⟩ f → ¬y (f x) }
+
+-- The converse does not hold. ¬ (∀ x → B x) tells us only that no such x exists,
+-- whereas ∃[ x ] (¬ B x) requires us to have evidence of some x for which B x does not hold.
+-- But what if the type A is uninhabited? Then it's possible for the lhs to be true
+-- while the rhs is false, QED.
+
+-- Exercise: Bin-isomorphism
+-- See QuantifiersBinIsomorphism.agda (I used stdlib imports that clash with things defined here)
