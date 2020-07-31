@@ -181,6 +181,8 @@ odd-∃ (odd-suc e)   with even-∃ e
 
 -- Exercise: ∃-even-odd
 
+-- Note: this exercise
+
 -- This is probably proved in the stdlib... but this works fine too.
 m+1≡sm : ∀ (m : ℕ) → m + 1 ≡ suc m
 m+1≡sm zero = refl
@@ -188,17 +190,19 @@ m+1≡sm (suc m) = cong suc (m+1≡sm m)
 
 -- The actual exercise...
 
-∃-even′ : ∀ {n : ℕ} → ∃[ m ] (    2 * m ≡ n) → even n
-∃-odd′  : ∀ {n : ℕ} → ∃[ m ] (2 * m + 1 ≡ n) → odd n
+-- This was valid in Agda 2.6.0.1, but now fails termination checking.
 
-∃-even′ ⟨ zero , refl ⟩ = even-zero
-∃-even′ ⟨ suc m , refl ⟩ rewrite sym (m+1≡sm (m + zero))
-                               | sym (+-assoc m (m + 0) 1)
-                               = even-suc (∃-odd′ ⟨ m , refl ⟩)
-
-∃-odd′ ⟨ zero , refl ⟩  = odd-suc even-zero
-∃-odd′ ⟨ suc m , refl ⟩ rewrite m+1≡sm (m + suc (m + zero))
-                               = odd-suc (∃-even′ ⟨ suc m , refl ⟩)
+-- ∃-even′ : ∀ {n : ℕ} → ∃[ m ] (    2 * m ≡ n) → even n
+-- ∃-odd′  : ∀ {n : ℕ} → ∃[ m ] (2 * m + 1 ≡ n) → odd n
+--
+-- ∃-even′ ⟨ zero , refl ⟩ = even-zero
+-- ∃-even′ ⟨ suc m , refl ⟩ rewrite sym (m+1≡sm (m + zero))
+--                                | sym (+-assoc m (m + 0) 1)
+--                                = even-suc (∃-odd′ ⟨ m , refl ⟩)
+--
+-- ∃-odd′ ⟨ zero , refl ⟩  = odd-suc even-zero
+-- ∃-odd′ ⟨ suc m , refl ⟩ rewrite m+1≡sm (m + suc (m + zero))
+--                                = odd-suc (∃-even′ ⟨ suc m , refl ⟩)
 -- One day rewrite will not feel like trial & error with the compiler... one day.
 
 -- Exercise: ∃-+-≤
