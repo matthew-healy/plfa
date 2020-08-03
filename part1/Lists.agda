@@ -8,6 +8,7 @@ open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _≤_; s≤s; z≤n
 open import Data.Nat.Properties
   using (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ; *-comm)
 open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Level using (Level)
@@ -33,7 +34,7 @@ data List′ : Set → Set where
 
 pattern [_] z = z ∷ []
 pattern [_,_] y z = y ∷ z ∷ []
-pattern [_,_,_] x y z = x ∷ z ∷ y ∷ []
+pattern [_,_,_] x y z = x ∷ y ∷ z ∷ []
 pattern [_,_,_,_] w x y z = w ∷ x ∷ y ∷ z ∷ []
 pattern [_,_,_,_,_] v w x y z = v ∷ w ∷ x ∷ y ∷ z ∷ []
 pattern [_,_,_,_,_,_] u v w x y z = u ∷ v ∷ w ∷ x ∷ y ∷ z ∷ []
@@ -341,3 +342,81 @@ foldr-monoid-foldl _⊗_ e ⊗-monoid = extensionality (foldr-monoid-foldl-xs _�
     foldl _⊗_ x xs       ≡⟨ cong (λ x → foldl _⊗_ x xs) (sym (identityˡ ⊗-monoid x) ) ⟩
     foldl _⊗_ (e ⊗ x) xs ≡⟨⟩
     foldl _⊗_ e (x ∷ xs) ∎
+
+-- All
+
+data All {A : Set} (P : A → Set) : List A → Set where
+  []  : All P []
+  _∷_ : ∀ {x : A} {xs : List A} → P x → All P xs → All P (x ∷ xs)
+
+_ : All (_≤ 2) [ 0 , 1 , 2 ]
+_ = z≤n ∷ s≤s z≤n ∷ s≤s (s≤s z≤n) ∷ []
+
+-- Any
+
+data Any {A : Set} (P : A → Set) : List A → Set where
+  here  : ∀ {x : A} {xs : List A} → P x → Any P (x ∷ xs)
+  there : ∀ {x : A} {xs : List A} → Any P xs → Any P (x ∷ xs)
+
+infix 4 _∈_ _∉_
+
+_∈_ : ∀ {A : Set} (x : A) (xs : List A) → Set
+x ∈ xs = Any (x ≡_) xs
+
+_∉_ : ∀ {A : Set} (x : A) (xs : List A) → Set
+x ∉ xs = ¬ (x ∈ xs)
+
+_ : 0 ∈ [ 0 , 1 , 0 , 2 ]
+_ = here refl
+
+_ : 0 ∈ [ 0 , 1 , 0 , 2 ]
+_ = there (there (here refl))
+
+not-in : 3 ∉ [ 0 , 1 , 0 , 2 ]
+not-in (there (there (there (here ()))))
+not-in (there (there (there (there ()))))
+
+-- All and append
+
+All-++-⇔ : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  All P (xs ++ ys) ⇔ (All P xs × All P ys)
+All-++-⇔ xs ys = record
+  { to   = to xs ys
+  ; from = from xs ys
+  }
+  where
+
+  to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    All P (xs ++ ys) → (All P xs × All P ys)
+  to []       ys Pys        = ⟨ [] , Pys ⟩
+  to (x ∷ xs) ys (Px ∷ Pxs++ys) with to xs ys Pxs++ys
+  ...                          | ⟨ Pxs , Pys ⟩ = ⟨ Px ∷ Pxs , Pys ⟩
+
+  from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    All P xs × All P ys → All P (xs ++ ys)
+  from []       ys ⟨ [] , Pys ⟩       = Pys
+  from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩ = Px ∷ (from xs ys ⟨ Pxs , Pys ⟩)
+
+-- Exercise: Any-++-⇔
+Any-++-⇔ : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  Any P (xs ++ ys) ⇔ (Any P xs ⊎ Any P ys)
+Any-++-⇔ xs ys = record
+  { to   = to xs ys
+  ; from = from xs ys
+  }
+  where
+
+  to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    Any P (xs ++ ys) → (Any P xs ⊎ Any P ys)
+  to []       ys Pxs++ys   = inj₂ Pxs++ys
+  to (x ∷ xs) ys (here Px) = inj₁ (here Px)
+  to (x ∷ xs) ys (there Pxs++ys) with to xs ys Pxs++ys
+  ...                                | inj₁ Pxs = inj₁ (there Pxs)
+  ...                                | inj₂ Pys = inj₂ Pys
+
+  from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    (Any P xs ⊎ Any P ys) → Any P (xs ++ ys)
+  from [] ys (inj₂ Py) = Py
+  from (x ∷ xs) ys (inj₁ (here Px)) = here Px
+  from (x ∷ xs) ys (inj₁ (there Pxs)) = there (from xs ys (inj₁ Pxs))
+  from (x ∷ xs) ys (inj₂ Pys) = there (from xs ys (inj₂ Pys))
