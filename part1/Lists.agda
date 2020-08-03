@@ -8,6 +8,7 @@ open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _≤_; s≤s; z≤n
 open import Data.Nat.Properties
   using (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ; *-comm)
 open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Data.Empty using (⊥-elim)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Product using (_×_; proj₁; proj₂; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
@@ -452,3 +453,56 @@ All-++-≃ xs ys = record
   ; from∘to = All-++-from∘to xs ys
   ; to∘from = All-++-to∘from xs ys
   }
+
+-- Exercise: ¬Any⇔All¬
+¬Any⇔All¬ : ∀ {A : Set} {P : A → Set} (xs : List A) → (¬_ ∘ Any P) xs ⇔ All (¬_ ∘ P) xs
+¬Any⇔All¬ xs = record
+  { to   = to xs
+  ; from = from xs
+  }
+  where
+
+    to : ∀ {A : Set} {P : A → Set} (xs : List A) → (¬_ ∘ Any P) xs → All (¬_ ∘ P) xs
+    to [] ¬AnyP       = []
+    to (x ∷ xs) ¬AnyP = (λ Px → ¬AnyP (here Px) ) ∷ to xs (λ Pxs → ¬AnyP (there Pxs))
+
+    from : ∀ {A : Set} {P : A → Set} (xs : List A) → All (¬_ ∘ P) xs → (¬_ ∘ Any P) xs
+    from [] All¬P ()
+    from (x ∷ xs) (¬Px ∷ All¬P) (here Px) = ¬Px Px
+    from (x ∷ xs) (¬Px ∷ All¬P) (there Pxs) = from xs All¬P Pxs
+
+-- Why is it important that _∘_ is generalised to arbitrary levels?
+
+-- Do we also have (¬_ ∘ All P) xs ⇔ Any (¬_ ∘ P) xs
+-- No, this does not hold. We know that not all xs satisfy P, but we cannot
+-- provide evidence that any specific x ∈ xs satisfies ¬P.
+-- We can however show that Any (¬_ ∘ P) xs → (¬_ ∘ All P) xs
+
+-- Exercise: ¬Any≃All¬
+¬Any≃All¬ : ∀ {A : Set} {P : A → Set} (xs : List A) → (¬_ ∘ Any P) xs ≃ All (¬_ ∘ P) xs
+¬Any≃All¬ xs = record
+  { to      = to xs
+  ; from    = from xs
+  ; from∘to = from∘to xs
+  ; to∘from = to∘from xs
+  }
+  where
+
+    to : ∀ {A : Set} {P : A → Set} (xs : List A) → (¬_ ∘ Any P) xs → All (¬_ ∘ P) xs
+    to [] ¬AnyP       = []
+    to (x ∷ xs) ¬AnyP = (λ Px → ¬AnyP (here Px)) ∷ to xs (λ Pxs → ¬AnyP (there Pxs))
+
+    from : ∀ {A : Set} {P : A → Set} (xs : List A) → All (¬_ ∘ P) xs → (¬_ ∘ Any P) xs
+    from [] All¬P ()
+    from (x ∷ xs) (¬Px ∷ All¬P) (here Px) = ¬Px Px
+    from (x ∷ xs) (¬Px ∷ All¬P) (there Pxs) = from xs All¬P Pxs
+
+    from∘to : ∀ {A : Set} {P : A → Set} (xs : List A) (p : (¬_ ∘ Any P) xs) → from xs (to xs p) ≡ p
+    from∘to [] ¬AnyP = extensionality λ ()
+    from∘to (x ∷ xs) ¬AnyP = extensionality λ{ (here Px) → refl
+                                             ; (there Pxs) → ⊥-elim (¬AnyP (there Pxs))
+                                             }
+
+    to∘from : ∀ {A : Set} {P : A → Set} (xs : List A) (p : All (¬_ ∘ P) xs) → to xs (from xs p) ≡ p
+    to∘from [] []      = refl
+    to∘from (x ∷ xs) (Px ∷ Pxs) = cong (Px ∷_) (to∘from xs Pxs)
