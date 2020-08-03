@@ -9,7 +9,7 @@ open import Data.Nat.Properties
   using (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ; *-comm)
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
-open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
+open import Data.Product using (_×_; proj₁; proj₂; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Level using (Level)
 open import plfa.part1.Isomorphism using (_≃_; _⇔_; extensionality)
@@ -378,24 +378,23 @@ not-in (there (there (there (there ()))))
 
 -- All and append
 
+All-++-to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  All P (xs ++ ys) → (All P xs × All P ys)
+All-++-to []       ys Pys        = ⟨ [] , Pys ⟩
+All-++-to (x ∷ xs) ys (Px ∷ Pxs++ys) with All-++-to xs ys Pxs++ys
+...                          | ⟨ Pxs , Pys ⟩ = ⟨ Px ∷ Pxs , Pys ⟩
+
+All-++-from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  All P xs × All P ys → All P (xs ++ ys)
+All-++-from []       ys ⟨ [] , Pys ⟩       = Pys
+All-++-from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩ = Px ∷ (All-++-from xs ys ⟨ Pxs , Pys ⟩)
+
 All-++-⇔ : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
   All P (xs ++ ys) ⇔ (All P xs × All P ys)
 All-++-⇔ xs ys = record
-  { to   = to xs ys
-  ; from = from xs ys
+  { to   = All-++-to xs ys
+  ; from = All-++-from xs ys
   }
-  where
-
-  to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
-    All P (xs ++ ys) → (All P xs × All P ys)
-  to []       ys Pys        = ⟨ [] , Pys ⟩
-  to (x ∷ xs) ys (Px ∷ Pxs++ys) with to xs ys Pxs++ys
-  ...                          | ⟨ Pxs , Pys ⟩ = ⟨ Px ∷ Pxs , Pys ⟩
-
-  from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
-    All P xs × All P ys → All P (xs ++ ys)
-  from []       ys ⟨ [] , Pys ⟩       = Pys
-  from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩ = Px ∷ (from xs ys ⟨ Pxs , Pys ⟩)
 
 -- Exercise: Any-++-⇔
 Any-++-⇔ : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
@@ -420,3 +419,36 @@ Any-++-⇔ xs ys = record
   from (x ∷ xs) ys (inj₁ (here Px)) = here Px
   from (x ∷ xs) ys (inj₁ (there Pxs)) = there (from xs ys (inj₁ Pxs))
   from (x ∷ xs) ys (inj₂ Pys) = there (from xs ys (inj₂ Pys))
+
+-- Exercise: All-++-≃
+All-++-from∘to : ∀ {A : Set} {P : A → Set} (xs ys : List A) (p : All P (xs ++ ys)) →
+  All-++-from xs ys (All-++-to xs ys p) ≡ p
+All-++-from∘to [] ys p = refl
+All-++-from∘to (x ∷ xs) ys (Px ∷ Pxs++ys) = cong (Px ∷_) (All-++-from∘to xs ys Pxs++ys)
+
+All-++-to∘from : ∀ {A : Set} {P : A → Set} (xs ys : List A) (p : All P xs × All P ys) →
+  All-++-to xs ys (All-++-from xs ys p) ≡ p
+All-++-to∘from [] ys ⟨ [] , Pys ⟩ = refl
+All-++-to∘from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩ =
+  begin
+    to (x ∷ xs) ys (from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩)
+  ≡⟨⟩
+    to (x ∷ xs) ys (Px ∷ (from xs ys ⟨ Pxs , Pys ⟩))
+  ≡⟨⟩
+    ⟨ Px ∷ (proj₁ (to xs ys (from xs ys ⟨ Pxs , Pys ⟩))) , proj₂ (to xs ys (from xs ys ⟨ Pxs , Pys ⟩)) ⟩
+  ≡⟨ cong (λ{ x → ⟨ Px ∷ (proj₁ x) , proj₂ (to xs ys (from xs ys ⟨ Pxs , Pys ⟩)) ⟩ }) (All-++-to∘from xs ys ⟨ Pxs , Pys ⟩) ⟩
+    ⟨ Px ∷ Pxs , proj₂ (to xs ys (from xs ys ⟨ Pxs , Pys ⟩)) ⟩
+  ≡⟨ cong (λ{ x → ⟨ Px ∷ Pxs , proj₂ x ⟩ }) (All-++-to∘from xs ys ⟨ Pxs , Pys ⟩) ⟩
+    ⟨ Px ∷ Pxs , Pys ⟩ ∎
+  where
+    to = All-++-to
+    from = All-++-from
+
+All-++-≃ : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  All P (xs ++ ys) ≃ (All P xs × All P ys)
+All-++-≃ xs ys = record
+  { to      = All-++-to xs ys
+  ; from    = All-++-from xs ys
+  ; from∘to = All-++-from∘to xs ys
+  ; to∘from = All-++-to∘from xs ys
+  }
