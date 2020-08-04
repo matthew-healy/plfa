@@ -506,3 +506,79 @@ All-++-≃ xs ys = record
     to∘from : ∀ {A : Set} {P : A → Set} (xs : List A) (p : All (¬_ ∘ P) xs) → to xs (from xs p) ≡ p
     to∘from [] []      = refl
     to∘from (x ∷ xs) (Px ∷ Pxs) = cong (Px ∷_) (to∘from xs Pxs)
+
+-- Exercise: All-∀
+-- Getting the types right for this was a nightmare.
+-- Might have been easier with extensionality imported from the stdlib?
+-- Anyway, here's the SO link that saved me days of pain:
+-- https://stackoverflow.com/questions/56355523/how-to-get-around-the-implicit-vs-explicit-function-type-error
+postulate
+  extensionality′ : ∀ {A : Set} {B : A → Set} → {f g : {x : A} → B x}
+    → ((x : A) → f {x} ≡ g {x})
+    → (λ {x} → f {x}) ≡ g
+
+All-∀ : ∀ {A : Set} {P : A → Set} (xs : List A) → All P xs ≃ ∀ {x} → x ∈ xs → P x
+All-∀ {A} {P} xs = record
+  { to      = to xs
+  ; from    = from xs
+  ; from∘to = from∘to xs
+  ; to∘from = λ x∈xs→Px → extensionality′ (λ x → extensionality (λ x∈xs → to∘from xs x∈xs→Px x∈xs) )
+  }
+  where
+
+  to : ∀ (xs : List A) → All P xs → ∀ {x} → x ∈ xs → P x
+  to (x ∷ xs) (Px ∷ Pxs) (here refl) = Px
+  to (x ∷ xs) (Px ∷ Pxs) (there x∈xs) = to xs Pxs x∈xs
+
+  from : ∀ (xs : List A) → (∀ {x} → x ∈ xs → P x) → All P xs
+  from [] Pxs = []
+  from (x ∷ xs) Pxs = Pxs (here refl) ∷ from xs λ{ x∈xs → Pxs (there x∈xs) }
+
+  from∘to : ∀ (xs : List A) (Pxs : All P xs) → from xs (to xs Pxs) ≡ Pxs
+  from∘to [] [] = refl
+  from∘to (x ∷ xs) (Px ∷ Pxs) = cong (Px ∷_) (from∘to xs Pxs)
+
+  to∘from : ∀ (xs : List A) → (x∈xs→Px : ∀ {x} → x ∈ xs → P x) {x : A} (x∈xs : x ∈ xs) → to xs (from xs x∈xs→Px) x∈xs ≡ x∈xs→Px x∈xs
+  to∘from (x ∷ xs) x∈xs→Px (here refl) = refl
+  to∘from (x ∷ xs) x∈xs→Px (there x∈xs) = to∘from xs (x∈xs→Px ∘ there) x∈xs
+
+-- Exercise: Any-∃
+-- Ugliest proof award winner August 2020
+Any-∃ : ∀ {A : Set} {P : A → Set} (xs : List A) → Any P xs ≃ ∃[ x ] (x ∈ xs × P x)
+Any-∃ {A} {P} xs = record
+  { to      = to xs
+  ; from    = from xs
+  ; from∘to = from∘to xs
+  ; to∘from = to∘from xs
+  }
+  where
+
+    to : ∀ (xs : List A) → Any P xs → ∃[ x ] (x ∈ xs × P x)
+    to (x ∷ xs) (here Px) = ⟨ x , ⟨ (here refl) , Px ⟩ ⟩
+    to (x ∷ xs) (there Pxs) with to xs Pxs
+    ...                        | ⟨ y , ⟨ Any≡y , Px ⟩ ⟩ = ⟨ y , ⟨ there Any≡y , Px ⟩ ⟩
+
+    from : ∀ (xs : List A) → ∃[ x ] (x ∈ xs × P x) → Any P xs
+    from (x ∷ xs) ⟨ x , ⟨ here refl , Px ⟩ ⟩ = here Px
+    from (x ∷ xs) ⟨ y , ⟨ there y∈xs , Py ⟩ ⟩ = there (from xs ⟨ y , ⟨ y∈xs , Py ⟩ ⟩)
+
+    from∘to : ∀ (xs : List A) (Px : Any P xs) → from xs (to xs Px) ≡ Px
+    from∘to (x ∷ xs) (here Px) = refl
+    from∘to (x ∷ xs) (there Pxs) = cong there (from∘to xs Pxs)
+
+    to∘from : ∀ (xs : List A) (∃x : ∃[ x ] (x ∈ xs × P x)) → to xs (from xs ∃x) ≡ ∃x
+    to∘from (x ∷ xs) ⟨ x , ⟨ here refl , Px ⟩ ⟩ = refl
+    to∘from (x ∷ xs) ⟨ y , ⟨ there Any≡y , Py ⟩ ⟩ = begin
+        to (x ∷ xs) (from (x ∷ xs) ⟨ y , ⟨ there Any≡y , Py ⟩ ⟩)
+      ≡⟨⟩
+        to (x ∷ xs) (there (from xs ⟨ y , ⟨ Any≡y , Py ⟩ ⟩))
+      ≡⟨⟩
+        ⟨ proj₁ (to xs (from xs ⟨ y , ⟨ Any≡y , Py ⟩ ⟩)) ,
+          ⟨ there (proj₁ (proj₂ (to xs (from xs ⟨ y , ⟨ Any≡y , Py ⟩ ⟩)))) ,
+            proj₂ (proj₂ (to xs (from xs ⟨ y , ⟨ Any≡y , Py ⟩ ⟩)))⟩ ⟩
+      ≡⟨ cong
+          (λ first →
+            ⟨ proj₁ first , ⟨ there (proj₁ (proj₂ first)) , proj₂ (proj₂ first) ⟩ ⟩)
+          (to∘from xs ⟨ y , ⟨ Any≡y , Py ⟩ ⟩)
+       ⟩
+        ⟨ y , ⟨ there Any≡y , Py ⟩ ⟩ ∎
