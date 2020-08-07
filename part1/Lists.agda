@@ -582,3 +582,67 @@ Any-∃ {A} {P} xs = record
           (to∘from xs ⟨ y , ⟨ Any≡y , Py ⟩ ⟩)
        ⟩
         ⟨ y , ⟨ there Any≡y , Py ⟩ ⟩ ∎
+
+-- Decidability of All
+
+all : ∀ {A : Set} → (A → Bool) → List A → Bool
+all p = (foldr _∧_ true) ∘ (map p)
+
+Decidable : ∀ {A : Set} → (A → Set) → Set
+Decidable {A} P = ∀ (x : A) → Dec (P x)
+
+All? : ∀ {A : Set} {P : A → Set} → Decidable P → Decidable (All P)
+All? P? [] = yes []
+All? P? (x ∷ xs) with P? x   | All? P? xs
+...                 | yes Px | yes Pxs    = yes (Px ∷ Pxs)
+...                 | no ¬Px | _          = no λ{ (Px ∷ Pxs) → ¬Px Px }
+...                 | _      | no ¬Pxs    = no λ{ (Px ∷ Pxs) → ¬Pxs Pxs }
+
+-- Exercise: Any?
+any : ∀ {A : Set} → (A → Bool) → List A → Bool
+any p = (foldr _∨_ false) ∘ (map p)
+
+Any? : ∀ {A : Set} {P : A → Set} → Decidable P → Decidable (Any P)
+Any? P? [] = no λ ()
+Any? P? (x ∷ xs) with P? x   | Any? P? xs
+...                 | yes Px | _          = yes (here Px)
+...                 | _      | yes Pxs    = yes (there Pxs)
+...                 | no ¬Px | no ¬Pxs    = no λ{ (here Px) → ¬Px Px
+                                                ; (there Pxs) → ¬Pxs Pxs
+                                                }
+
+-- Exercise: split
+data merge {A : Set} : (xs ys zs : List A) → Set where
+  [] :
+      --------------
+      merge [] [] []
+
+  left-∷ : ∀ {x xs ys zs}
+    → merge xs ys zs
+      --------------------------
+    → merge (x ∷ xs) ys (x ∷ zs)
+
+  right-∷ : ∀ {y xs ys zs}
+    → merge xs ys zs
+      --------------
+    → merge xs (y ∷ ys) (y ∷ zs)
+
+-- proj (proj (proj (proj (proj ugly-proof))))
+split : ∀ {A : Set} {P : A → Set} (P? : Decidable P) (zs : List A)
+  → ∃[ xs ] ∃[ ys ] (merge xs ys zs × All P xs × All (¬_ ∘ P) ys)
+split P? [] = ⟨ [] , ⟨ [] , ⟨ [] , ⟨ [] , [] ⟩ ⟩ ⟩ ⟩
+proj₁ (split P? (z ∷ zs)) with P? z
+...                          | yes Pz = z ∷ proj₁ (split P? zs)
+...                          | no ¬Pz = proj₁ (split P? zs)
+proj₁ (proj₂ (split P? (z ∷ zs))) with P? z
+...                          | yes Pz = proj₁ (proj₂ (split P? zs))
+...                          | no ¬Pz = z ∷ (proj₁ (proj₂ (split P? zs)))
+proj₁ (proj₂ (proj₂ (split P? (z ∷ zs)))) with P? z
+...                                          | yes Pz = left-∷ (proj₁ (proj₂ (proj₂ (split P? zs))))
+...                                          | no ¬Pz = right-∷ (proj₁ (proj₂ (proj₂ (split P? zs))))
+proj₁ (proj₂ (proj₂ (proj₂ (split P? (z ∷ zs))))) with P? z
+...                                                  | yes Pz = Pz ∷ proj₁ (proj₂ (proj₂ (proj₂ (split P? zs))))
+...                                                  | no ¬Pz = proj₁ (proj₂ (proj₂ (proj₂ (split P? zs))))
+proj₂ (proj₂ (proj₂ (proj₂ (split P? (z ∷ zs))))) with P? z
+...                                                  | yes Pz = proj₂ (proj₂ (proj₂ (proj₂ (split P? zs))))
+...                                                  | no ¬Pz = ¬Pz ∷ (proj₂ (proj₂ (proj₂ (proj₂ (split P? zs)))))
