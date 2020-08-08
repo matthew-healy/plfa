@@ -95,3 +95,152 @@ mul′ = μ′ × ⇒ ƛ′ m ⇒ ƛ′ n ⇒
   × = ‵ "×"
   m = ‵ "m"
   n = ‵ "n"
+
+-- Bound and free variables
+
+-- ƛ "s" ⇒ ƛ "z" ⇒ ` "s" · (` "s" · ` "z") has both s and z as bound variables.
+-- ƛ "z" ⇒ ` "s" · (` "s" · ` "z") has z bound and s free.
+-- ` "s" · (` "s" · ` "z") has both s and z as free variables.
+
+-- No free variables: "closed", otherwise "open"
+
+-- Values
+
+data Value : Term → Set where
+
+  V-ƛ : ∀ {x N}
+        ---------------
+      → Value (ƛ x ⇒ N)
+
+  V-zero :
+        -----------
+        Value ‵zero
+
+  V-suc : ∀ {V}
+    → Value V
+      --------------
+    → Value (‵suc V)
+
+-- Substitution
+infix 9 _[_:=_]
+
+_[_:=_] : Term → Id → Term → Term
+(‵ x) [ y := V ] with x ≟ y
+... | yes _         = V
+... | no  _         = ‵ x
+(ƛ x ⇒ N) [ y := V ] with x ≟ y
+... | yes _         = ƛ x ⇒ N
+... | no  _         = ƛ x ⇒ N [ y := V ]
+(L ∙ M) [ y := V ]  = L [ y := V ] ∙ M [ y := V ]
+(‵zero) [ y := V ]  = ‵zero
+(‵suc M) [ y := V ] = ‵suc M [ y := V ]
+(case L [zero⇒ M |suc x ⇒ N ]) [ y := V ] with x ≟ y
+... | yes _         = case L [ y := V ] [zero⇒ M [ y := V ] |suc x ⇒ N ]
+... | no  _         = case L [ y := V ] [zero⇒ M [ y := V ] |suc x ⇒ N [ y := V ] ]
+(μ x ⇒ N) [ y := V ] with x ≟ y
+... | yes _         = μ x ⇒ N
+... | no  _         = μ x ⇒ N [ y := V ]
+
+-- Examples
+_ : (ƛ "z" ⇒ ‵ "s" ∙ (‵ "s" ∙ ‵ "z")) [ "s" := sucᶜ ] ≡ ƛ "z" ⇒ sucᶜ ∙ (sucᶜ ∙ ‵ "z")
+_ = refl
+
+_ : (sucᶜ ∙ (sucᶜ ∙ ‵ "z")) [ "z" := ‵zero ] ≡ sucᶜ ∙ (sucᶜ ∙ ‵zero)
+_ = refl
+
+_ : (ƛ "x" ⇒ ‵ "y") [ "y" := ‵zero ] ≡ ƛ "x" ⇒ ‵zero
+_ = refl
+
+_ : (ƛ "x" ⇒ ‵ "x") ["x" := ‵zero ] ≡ ƛ "x" ⇒ ‵ "x"
+_ = refl
+
+_ : (ƛ "y" ⇒ ‵ "y") [ "x" := ‵zero ] ≡ ƛ "y" ⇒ ‵ "y"
+_ = refl
+
+-- Quiz
+_ : (ƛ "y" ⇒ ‵ "x" ∙ (ƛ "x" ⇒ ‵ "x")) [ "x" := ‵zero ] ≡ (ƛ "y" ⇒ ‵zero ∙ (ƛ "x" ⇒ ‵ "x"))
+_ = refl
+
+-- Exercise: _[_:=_]′
+_[_:=_]′ : Term → Id → Term → Term
+replaceIfEqual : (x y : Id) → (Term → Term) → Term → Term → Term
+
+-- These are the same as before
+(‵ x) [ y := V ]′ with x ≟ y
+... | yes _ = V
+... | no  _ = ‵ x
+(L ∙ M) [ y := V ]′  = L [ y := V ] ∙ M [ y := V ]
+(‵zero) [ y := V ]′  = ‵zero
+(‵suc M) [ y := V ]′ = ‵suc M [ y := V ]
+
+-- These call replaceIfEqual with the Ids to compare, a function which computes the whole term,
+-- the term to (potentially) apply replacement to, and the value we'll replace y by.
+(ƛ x ⇒ N) [ y := V ]′                      = replaceIfEqual x y (λ N → ƛ x ⇒ N) N V
+(case L [zero⇒ M |suc x ⇒ N ]) [ y := V ]′ = replaceIfEqual x y (λ N → case L [ y := V ] [zero⇒ M [ y := V ] |suc x ⇒ N ]) N V
+(μ x ⇒ N) [ y := V ]′                      = replaceIfEqual x y (λ N → μ x ⇒ N) N V
+
+replaceIfEqual x y Term→Term N V with x ≟ y
+... | yes _ = Term→Term N
+... | no  _ = Term→Term (N [ y := V ]′)
+
+-- Test:
+_ : (ƛ "z" ⇒ ‵ "s" ∙ (‵ "s" ∙ ‵ "z")) [ "s" := sucᶜ ]′ ≡ ƛ "z" ⇒ sucᶜ ∙ (sucᶜ ∙ ‵ "z")
+_ = refl
+
+_ : (sucᶜ ∙ (sucᶜ ∙ ‵ "z")) [ "z" := ‵zero ]′ ≡ sucᶜ ∙ (sucᶜ ∙ ‵zero)
+_ = refl
+-- It works!
+
+-- Reduction
+infix 4 _—→_
+
+data _—→_ : Term → Term → Set where
+
+  ξ-∙₁ : ∀ {L L′ M}
+    → L —→ L′
+      ---------------
+    → L ∙ M —→ L′ ∙ M
+
+  ξ-∙₂ : ∀ {V M M′}
+    → Value V
+    → M —→ M′
+      ---------------
+    → V ∙ M —→ V ∙ M′
+
+  β-ƛ : ∀ {x N V}
+    → Value V
+      -----------------------------
+    → (ƛ x ⇒ N) ∙ V —→ N [ x := V ]
+
+  ξ-suc : ∀ {M M′}
+    → M —→ M′
+      -----------------
+    → ‵suc M —→ ‵suc M′
+
+  ξ-case : ∀ {x L L′ M N}
+    → L —→ L′
+      --------------------------------------------------------------
+    → case L [zero⇒ M |suc x ⇒ N ] —→ case L′ [zero⇒ M |suc x ⇒ N ]
+
+  β-zero : ∀ {x M N}
+      -------------------------------------
+    → case ‵zero [zero⇒ M |suc x ⇒ N ] —→ M
+
+  β-suc : ∀ {x V M N}
+    → Value V
+      -------------------------------------------------
+    → case ‵suc V [zero⇒ M |suc x ⇒ N ] —→ N [ x := V ]
+
+  β-μ : ∀ {x M}
+      -----------------------------
+    → μ x ⇒ M —→ M [ x := μ x ⇒ M ]
+
+-- Quiz
+_ : (ƛ "x" ⇒ ‵ "x") ∙ (ƛ "x" ⇒ ‵ "x") —→ (ƛ "x" ⇒ ‵ "x")
+_ = β-ƛ V-ƛ
+
+_ : (ƛ "x" ⇒ ‵ "x") ∙ (ƛ "x" ⇒ ‵ "x") ∙ (ƛ "x" ⇒ ‵ "x")  —→ (ƛ "x" ⇒ ‵ "x") ∙ (ƛ "x" ⇒ ‵ "x")
+_ = ξ-∙₁ (β-ƛ V-ƛ)
+
+_ : twoᶜ ∙ sucᶜ ∙ ‵zero —→ (ƛ "z" ⇒ sucᶜ ∙ (sucᶜ ∙ ‵ "z")) ∙ ‵zero
+_ = ξ-∙₁ (β-ƛ V-ƛ)
