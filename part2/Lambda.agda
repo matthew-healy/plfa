@@ -9,7 +9,8 @@ open import Data.String using (String; _≟_)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋; False; toWitnessFalse)
 open import Relation.Nullary.Negation using (¬?)
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong)
+open import plfa.part1.Isomorphism using (_≲_)
 
 Id : Set
 Id = String
@@ -244,3 +245,72 @@ _ = ξ-∙₁ (β-ƛ V-ƛ)
 
 _ : twoᶜ ∙ sucᶜ ∙ ‵zero —→ (ƛ "z" ⇒ sucᶜ ∙ (sucᶜ ∙ ‵ "z")) ∙ ‵zero
 _ = ξ-∙₁ (β-ƛ V-ƛ)
+
+-- Reflexive and transitive closure
+infix  2 _—↠_
+infix  1 begin_
+infixr 2 _—→⟨_⟩_
+infix  3 _∎
+
+data _—↠_ : Term → Term → Set where
+  _∎ : ∀ M
+      ------
+    → M —↠ M
+
+  _—→⟨_⟩_ : ∀ L {M N}
+    → L —→ M
+    → M —↠ N
+      ------
+    → L —↠ N
+
+begin_ : ∀ {M N}
+  → M —↠ N
+    ------
+  → M —↠ N
+begin M—↠N = M—↠N
+
+-- Alternative definition
+data _—↠′_ : Term → Term → Set where
+  step′ : ∀ {M N}
+    → M —→ N
+      -------
+    → M —↠′ N
+
+  refl′ : ∀ {M}
+      -------
+    → M —↠′ M
+
+  trans′ : ∀ {L M N}
+    → L —↠′ M
+    → M —↠′ N
+      -------
+    → L —↠′ N
+
+-- Exercise: —↠≲—↠′
+—↠-trans : ∀ L {M N : Term}
+  → L —↠ M
+  → M —↠ N
+    ------
+  → L —↠ N
+—↠-trans L (L ∎) L↠N = L↠N
+—↠-trans L (_—→⟨_⟩_ L {P} L→P P↠M) M↠N = L —→⟨ L→P ⟩ (—↠-trans P P↠M M↠N)
+
+—↠≲—↠′ : ∀ {M N : Term} → M —↠ N ≲ M —↠′ N
+—↠≲—↠′ = record
+  { to      = to
+  ; from    = from
+  ; from∘to = from∘to
+  }
+  where
+    to : ∀ {M N : Term} → M —↠ N → M —↠′ N
+    to (M ∎) = refl′
+    to (M —→⟨ M→N ⟩ N↠O) = trans′ (step′ M→N) (to N↠O)
+
+    from : ∀ {M N : Term} → M —↠′ N → M —↠ N
+    from {M} {N} (step′ M→N) = M —→⟨ M→N ⟩ N ∎
+    from {M} refl′ = M ∎
+    from {M} (trans′ M↠′N N↠′O) = —↠-trans M (from M↠′N) (from N↠′O)
+
+    from∘to : ∀ {M N : Term} (M↠N : M —↠ N) → from (to M↠N) ≡ M↠N
+    from∘to (M ∎) = refl
+    from∘to (M —→⟨ M→L ⟩ L↠N) = cong (λ x → M —→⟨ M→L ⟩ x) (from∘to L↠N)
