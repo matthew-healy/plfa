@@ -314,3 +314,111 @@ data _—↠′_ : Term → Term → Set where
     from∘to : ∀ {M N : Term} (M↠N : M —↠ N) → from (to M↠N) ≡ M↠N
     from∘to (M ∎) = refl
     from∘to (M —→⟨ M→L ⟩ L↠N) = cong (λ x → M —→⟨ M→L ⟩ x) (from∘to L↠N)
+
+-- Confluence
+-- If term L reduces to two other terms M and N, then both M and N reduce to some P,
+postulate
+  confluence : ∀ {L M N}
+    → ((L —↠ M) × (L —↠ N))
+      ----------------------------
+    → ∃[ P ] ((M —↠ P) × (N —↠ P))
+
+-- If L reduces to M and N by a single step, we call this the diamond property.
+  diamond : ∀ {L M N}
+    → ((L —→ M) × (L —→ N))
+      ----------------------------
+    → ∃[ P ] ((M —↠ P) × (N —↠ P))
+
+-- "The reduction system studied in this chapter is deterministic."
+postulate
+  deterministic : ∀ {L M N}
+    → L —→ M
+    → L —→ N
+      ------
+    → M ≡ N
+
+-- "Every deterministic relationship satisfies confluence and the diamond property."
+
+-- Examples
+_ : twoᶜ ∙ sucᶜ ∙ ‵zero —↠ ‵suc ‵suc ‵zero
+_ = begin
+      twoᶜ ∙ sucᶜ ∙ ‵zero
+    —→⟨ ξ-∙₁ (β-ƛ V-ƛ) ⟩
+      (ƛ "z" ⇒ sucᶜ ∙ (sucᶜ ∙ ‵ "z")) ∙ ‵zero
+    —→⟨ β-ƛ V-zero ⟩
+      sucᶜ ∙ (sucᶜ ∙ ‵zero)
+    —→⟨ ξ-∙₂ V-ƛ (β-ƛ V-zero) ⟩
+      sucᶜ ∙ ‵suc ‵zero
+    —→⟨ β-ƛ (V-suc V-zero) ⟩
+      ‵suc ‵suc ‵zero
+    ∎
+
+one : Term
+one = ‵suc ‵zero
+
+oneᶜ : Term
+oneᶜ = ƛ "s" ⇒ ƛ "z" ⇒ ‵ "s" ∙ ‵ "z"
+
+-- Exercise: plus-example
+_ : plus ∙ one ∙ one —↠ ‵suc ‵suc ‵zero
+_ =
+  begin
+    plus ∙ one ∙ one
+  —→⟨ ξ-∙₁ (ξ-∙₁ β-μ) ⟩
+    (ƛ "m" ⇒ ƛ "n" ⇒
+      case ‵ "m" [zero⇒ ‵ "n" |suc "m" ⇒ ‵suc (plus ∙ ‵ "m" ∙ ‵ "n") ])
+      ∙ one ∙ one
+  —→⟨ ξ-∙₁ (β-ƛ (V-suc V-zero)) ⟩
+    (ƛ "n" ⇒
+      case one [zero⇒ ‵ "n" |suc "m" ⇒ ‵suc (plus ∙ ‵ "m" ∙ ‵ "n") ])
+      ∙ one
+  —→⟨ β-ƛ (V-suc V-zero) ⟩
+    case one [zero⇒ one |suc "m" ⇒ ‵suc (plus ∙ ‵ "m" ∙ one)]
+  —→⟨ β-suc V-zero ⟩
+    ‵suc (plus ∙ ‵zero ∙ one)
+  —→⟨ ξ-suc (ξ-∙₁ (ξ-∙₁ β-μ)) ⟩
+    ‵suc ((ƛ "m" ⇒ ƛ "n" ⇒
+      case ‵ "m" [zero⇒ ‵ "n" |suc "m" ⇒ ‵suc (plus ∙ ‵ "m" ∙ ‵ "n") ])
+      ∙ ‵zero ∙ one)
+   —→⟨ ξ-suc (ξ-∙₁ (β-ƛ V-zero)) ⟩
+    ‵suc ((ƛ "n" ⇒
+      case ‵zero [zero⇒ ‵ "n" |suc "m" ⇒ ‵suc (plus ∙ ‵ "m" ∙ ‵ "n")])
+      ∙ one)
+   —→⟨ ξ-suc (β-ƛ (V-suc V-zero)) ⟩
+    ‵suc (case ‵zero [zero⇒ one |suc "m" ⇒ ‵suc (plus ∙ ‵ "m" ∙ one)])
+   —→⟨ ξ-suc β-zero ⟩
+    ‵suc ‵suc ‵zero
+   ∎
+
+ -- plusᶜ : Term
+ -- plusᶜ = ƛ "m" ⇒ ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒
+ --         ‵ "m" ∙ ‵ "s" ∙ (‵ "n" ∙ ‵ "s" ∙ ‵ "z")
+
+_ : plusᶜ ∙ oneᶜ ∙ oneᶜ ∙ sucᶜ ∙ ‵zero —↠ ‵suc ‵suc ‵zero
+_ =
+  begin
+    (ƛ "m" ⇒ ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒ ‵ "m" ∙ ‵ "s" ∙ (‵ "n" ∙ ‵ "s" ∙ ‵ "z"))
+      ∙ oneᶜ ∙ oneᶜ ∙ sucᶜ ∙ ‵zero
+  —→⟨ ξ-∙₁ (ξ-∙₁ (ξ-∙₁ (β-ƛ V-ƛ))) ⟩
+    (ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒ oneᶜ ∙ ‵ "s" ∙ (‵ "n" ∙ ‵ "s" ∙ ‵ "z"))
+      ∙ oneᶜ ∙ sucᶜ ∙ ‵zero
+  —→⟨ ξ-∙₁ (ξ-∙₁ (β-ƛ V-ƛ)) ⟩
+    (ƛ "s" ⇒ ƛ "z" ⇒ oneᶜ ∙ ‵ "s" ∙ (oneᶜ ∙ ‵ "s" ∙ ‵ "z"))
+      ∙ sucᶜ ∙ ‵zero
+  —→⟨ ξ-∙₁ (β-ƛ V-ƛ) ⟩
+    (ƛ "z" ⇒ oneᶜ ∙ sucᶜ ∙ (oneᶜ ∙ sucᶜ ∙ ‵ "z")) ∙ ‵zero
+  —→⟨ β-ƛ V-zero ⟩
+    (ƛ "s" ⇒ ƛ "z" ⇒ ‵ "s" ∙ ‵ "z") ∙ sucᶜ ∙ (oneᶜ ∙ sucᶜ ∙ ‵zero)
+  —→⟨ ξ-∙₁ (β-ƛ V-ƛ) ⟩
+    (ƛ "z" ⇒ sucᶜ ∙ ‵ "z") ∙ ((ƛ "s" ⇒ ƛ "z" ⇒ ‵ "s" ∙ ‵ "z") ∙ sucᶜ ∙ ‵zero)
+  —→⟨ ξ-∙₂ V-ƛ (ξ-∙₁ (β-ƛ V-ƛ)) ⟩
+    (ƛ "z" ⇒ sucᶜ ∙ ‵ "z") ∙ ((ƛ "z" ⇒ sucᶜ ∙ ‵ "z") ∙ ‵zero)
+  —→⟨ ξ-∙₂ V-ƛ (β-ƛ V-zero) ⟩
+    (ƛ "z" ⇒ sucᶜ ∙ ‵ "z") ∙ (sucᶜ ∙ ‵zero)
+  —→⟨ ξ-∙₂ V-ƛ (β-ƛ V-zero) ⟩
+    (ƛ "z" ⇒ sucᶜ ∙ ‵ "z") ∙ (‵suc ‵zero)
+  —→⟨ β-ƛ (V-suc V-zero) ⟩
+    sucᶜ ∙ (‵suc ‵zero)
+  —→⟨ β-ƛ (V-suc V-zero) ⟩
+    ‵suc ‵suc ‵zero
+  ∎
