@@ -157,3 +157,65 @@ value? : ∀ {A M} → ∅ ⊢ M ⦂ A → Dec (Value M)
 value? ⊢M with progress ⊢M
 ... | step M—→M′ = no (—→¬V M—→M′)
 ... | done VM = yes VM
+
+-- Prelude to Preservation: Renaming
+
+ext : ∀ {Γ Δ}
+  → (∀ {x A}     →         Γ ∋ x ⦂ A →        Δ ∋ x ⦂ A) -- if x has the same type in both contexts
+    ---------------------------------------------------
+  → (∀ {x y A B} → Γ , y ⦂ B ∋ x ⦂ A → Δ , y ⦂ B ∋ x ⦂ A) -- then it has the same type in extensions of those contexts
+ext ρ Z        = Z
+ext ρ (S x≢y ∋x) = S x≢y (ρ ∋x)
+
+rename : ∀ {Γ Δ}
+  → (∀ {x A} → Γ ∋ x ⦂ A → Δ ∋ x ⦂ A)
+    --------------------------------
+  → (∀ {M A} → Γ ⊢ M ⦂ A → Δ ⊢ M ⦂ A)
+rename ρ (⊢` ∋w)          = ⊢` (ρ ∋w)
+rename ρ (⊢ƛ ⊢N)          = ⊢ƛ (rename (ext ρ) ⊢N)
+rename ρ (⊢L · ⊢M)        = (rename ρ ⊢L) · (rename ρ ⊢M)
+rename ρ ⊢zero            = ⊢zero
+rename ρ (⊢suc ⊢M)        = ⊢suc (rename ρ ⊢M)
+rename ρ (⊢case ⊢L ⊢M ⊢N) = ⊢case (rename ρ ⊢L) (rename ρ ⊢M) (rename (ext ρ) ⊢N)
+rename ρ (⊢μ ⊢M)          = ⊢μ (rename (ext ρ) ⊢M)
+
+weaken : ∀ {Γ M A} -- A closed term can be weakened to any context
+  → ∅ ⊢ M ⦂ A
+    ---------
+  → Γ ⊢ M ⦂ A
+weaken {Γ} ⊢M = rename ρ ⊢M
+  where
+  ρ : ∀ {z C}
+    → ∅ ∋ z ⦂ C
+      ---------
+    → Γ ∋ z ⦂ C
+  ρ ()
+
+drop : ∀ {Γ x M A B C} -- If the last two variables in any context have the same name then we can drop the shadowed one.
+  → Γ , x ⦂ A , x ⦂ B ⊢ M ⦂ C
+    ------------------------
+  → Γ , x ⦂ B ⊢ M ⦂ C
+drop {Γ} {x} {M} {A} {B} ⊢M = rename ρ ⊢M
+  where
+  ρ : ∀ {z C}
+    → Γ , x ⦂ A , x ⦂ B ∋ z ⦂ C
+      ------------------------
+    → Γ , x ⦂ B ∋ z ⦂ C
+  ρ Z                = Z
+  ρ (S x≢x Z)        = ⊥-elim (x≢x refl)
+  ρ (S z≢x (S _ ∋z)) = S z≢x ∋z
+
+swap : ∀ {Γ x y M A B C} -- If the last two variables in any context have different names then we can swap them.
+  → x ≢ y
+  → Γ , y ⦂ B , x ⦂ A ⊢ M ⦂ C
+    ------------------------
+  → Γ , x ⦂ A , y ⦂ B ⊢ M ⦂ C
+swap {Γ} {x} {y} {M} {A} {B} x≢y ⊢M = rename ρ ⊢M
+  where
+  ρ : ∀ {z C}
+    → Γ , y ⦂ B , x ⦂ A ∋ z ⦂ C
+      ------------------------
+    → Γ , x ⦂ A , y ⦂ B ∋ z ⦂ C
+  ρ Z                  = S x≢y Z
+  ρ (S z≢x Z)          = Z
+  ρ (S z≢x (S z≢y ∋z)) = S z≢y (S z≢x ∋z)
