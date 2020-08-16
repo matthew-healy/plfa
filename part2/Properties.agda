@@ -279,3 +279,18 @@ subst′ ⊢V (⊢μ ⊢N)          = subst-subterm ⊢V ⊢N λ{ P → ⊢μ P 
 subst-subterm {x} {y} ⊢V ⊢N g with x ≟ y
 ... | yes refl = g (drop ⊢N)
 ... | no  x≢y  = g (subst′ ⊢V (swap x≢y ⊢N))
+
+-- Preservation
+preserve : ∀ {M N A}
+  → ∅ ⊢ M ⦂ A
+  → M —→ N
+    ---------
+  → ∅ ⊢ N ⦂ A
+preserve (⊢L · ⊢M)               (ξ-·₁ L—→L′)    = (preserve ⊢L L—→L′) · ⊢M
+preserve (⊢L · ⊢M)               (ξ-·₂ VL M—→M′) = ⊢L · (preserve ⊢M M—→M′)
+preserve ((⊢ƛ ⊢N) · ⊢V)          (β-ƛ VV)        = subst ⊢V ⊢N
+preserve (⊢suc ⊢M)               (ξ-suc M—→M′)   = ⊢suc (preserve ⊢M M—→M′)
+preserve (⊢case ⊢L ⊢M ⊢N)        (ξ-case L—→L′)  = ⊢case (preserve ⊢L L—→L′) ⊢M ⊢N
+preserve (⊢case ⊢L ⊢M ⊢N)        β-zero          = ⊢M
+preserve (⊢case (⊢suc ⊢V) ⊢M ⊢N) (β-suc VV)      = subst ⊢V ⊢N
+preserve (⊢μ ⊢M)                 β-μ             = subst (⊢μ ⊢M) ⊢M
