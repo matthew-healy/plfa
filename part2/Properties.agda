@@ -219,3 +219,63 @@ swap {Γ} {x} {y} {M} {A} {B} x≢y ⊢M = rename ρ ⊢M
   ρ Z                  = S x≢y Z
   ρ (S z≢x Z)          = Z
   ρ (S z≢x (S z≢y ∋z)) = S z≢y (S z≢x ∋z)
+
+-- Prelude to Preservation: Substitution
+
+subst : ∀ {Γ x N V A B}
+  → ∅ ⊢ V ⦂ A
+  → Γ , x ⦂ A ⊢ N ⦂ B
+    --------------------
+  → Γ ⊢ N [ x := V ] ⦂ B
+subst {x = y} ⊢V (⊢` {x = x} Z) with x ≟ y
+... | yes _           = weaken ⊢V
+... | no  x≢y         = ⊥-elim (x≢y refl)
+subst {x = y} ⊢V (⊢` {x = x} (S x≢y ∋x)) with x ≟ y
+... | yes refl        = ⊥-elim (x≢y refl)
+... | no  _           = ⊢` ∋x
+subst {x = y} ⊢V (⊢ƛ {x = x} ⊢N) with x ≟ y
+... | yes refl        = ⊢ƛ (drop ⊢N)
+... | no x≢y          = ⊢ƛ (subst ⊢V (swap x≢y ⊢N))
+subst ⊢V (⊢L · ⊢M)   = (subst ⊢V ⊢L) · (subst ⊢V ⊢M)
+subst ⊢V ⊢zero       = ⊢zero
+subst ⊢V (⊢suc ⊢N)   = ⊢suc (subst ⊢V ⊢N)
+subst {x = y} ⊢V (⊢case {x = x} ⊢L ⊢M ⊢N) with x ≟ y
+... | yes refl       = ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (drop ⊢N)
+... | no x≢y         = ⊢case (subst ⊢V ⊢L) (subst ⊢V ⊢M) (subst ⊢V (swap x≢y ⊢N))
+subst {x = y} ⊢V (⊢μ {x = x} ⊢M) with x ≟ y
+... | yes refl       = ⊢μ (drop ⊢M)
+... | no x≢y         = ⊢μ (subst ⊢V (swap x≢y ⊢M))
+
+-- Exercise: subst′
+subst′ : ∀ {Γ x N V A B}
+  → ∅ ⊢ V ⦂ A
+  → Γ , x ⦂ A ⊢ N ⦂ B
+    --------------------
+  → Γ ⊢ N [ x := V ]′ ⦂ B
+
+-- lol wtf
+subst-subterm : ∀ {x y : Id} → ∀ {Γ f N V A B C D}
+  → ∅ ⊢ V ⦂ A
+  → Γ , y ⦂ A , x ⦂ B ⊢ N ⦂ C
+  → (∀ {P} → Γ , x ⦂ B ⊢ P ⦂ C → Γ ⊢ f P ⦂ D)
+    -----------------------------------------
+  → Γ ⊢ replaceIfNotEqual x y f N V ⦂ D
+
+-- These remain the same
+subst′ {x = y} ⊢V (⊢` {x = x} Z) with x ≟ y
+... | yes _   = weaken ⊢V
+... | no  x≢y = ⊥-elim (x≢y refl)
+subst′ {x = y} ⊢V (⊢` {x = x} (S x≢y ∋x)) with x ≟ y
+... | yes refl = ⊥-elim (x≢y refl)
+... | no  _    = ⊢` ∋x
+subst′ ⊢V (⊢L · ⊢M) = (subst′ ⊢V ⊢L) · (subst′ ⊢V ⊢M)
+subst′ ⊢V ⊢zero     = ⊢zero
+subst′ ⊢V (⊢suc ⊢N) = ⊢suc (subst′ ⊢V ⊢N)
+
+subst′ ⊢V (⊢ƛ ⊢N)          = subst-subterm ⊢V ⊢N λ{ P → ⊢ƛ P }
+subst′ ⊢V (⊢case ⊢L ⊢M ⊢N) = subst-subterm ⊢V ⊢N λ{ P → ⊢case (subst′ ⊢V ⊢L) (subst′ ⊢V ⊢M) P }
+subst′ ⊢V (⊢μ ⊢N)          = subst-subterm ⊢V ⊢N λ{ P → ⊢μ P }
+
+subst-subterm {x} {y} ⊢V ⊢N g with x ≟ y
+... | yes refl = g (drop ⊢N)
+... | no  x≢y  = g (subst′ ⊢V (swap x≢y ⊢N))

@@ -164,23 +164,23 @@ _ = refl
 
 -- Exercise: _[_:=_]′
 _[_:=_]′ : Term → Id → Term → Term
-replaceIfEqual : (x y : Id) → (Term → Term) → Term → Term → Term
+replaceIfNotEqual : (x y : Id) → (Term → Term) → Term → Term → Term
 
 -- These are the same as before
 (` x) [ y := V ]′ with x ≟ y
 ... | yes _ = V
 ... | no  _ = ` x
-(L · M) [ y := V ]′  = L [ y := V ] · M [ y := V ]
+(L · M) [ y := V ]′  = L [ y := V ]′ · M [ y := V ]′
 (`zero) [ y := V ]′  = `zero
-(`suc M) [ y := V ]′ = `suc M [ y := V ]
+(`suc M) [ y := V ]′ = `suc M [ y := V ]′
 
--- These call replaceIfEqual with the Ids to compare, a function which computes the whole term,
+-- These call replaceIfNotEqual with the Ids to compare, a function which computes the whole term,
 -- the term to (potentially) apply replacement to, and the value we'll replace y by.
-(ƛ x ⇒ N) [ y := V ]′                      = replaceIfEqual x y (λ N → ƛ x ⇒ N) N V
-(case L [zero⇒ M |suc x ⇒ N ]) [ y := V ]′ = replaceIfEqual x y (λ N → case L [ y := V ] [zero⇒ M [ y := V ] |suc x ⇒ N ]) N V
-(μ x ⇒ N) [ y := V ]′                      = replaceIfEqual x y (λ N → μ x ⇒ N) N V
+(ƛ x ⇒ N) [ y := V ]′                      = replaceIfNotEqual x y (λ N → ƛ x ⇒ N) N V
+(case L [zero⇒ M |suc x ⇒ N ]) [ y := V ]′ = replaceIfNotEqual x y (λ N → case L [ y := V ]′ [zero⇒ M [ y := V ]′ |suc x ⇒ N ]) N V
+(μ x ⇒ N) [ y := V ]′                      = replaceIfNotEqual x y (λ N → μ x ⇒ N) N V
 
-replaceIfEqual x y Term→Term N V with x ≟ y
+replaceIfNotEqual x y Term→Term N V with x ≟ y
 ... | yes _ = Term→Term N
 ... | no  _ = Term→Term (N [ y := V ]′)
 
