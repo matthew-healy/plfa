@@ -29,6 +29,9 @@ data Type : Set where
   _⇒_  : Type → Type → Type
   Nat  : Type
   _`×_ : Type → Type → Type
+  -- begin
+  _`⊎_ : Type → Type → Type
+  -- end
 
 -- Contexts
 data Context : Set where
@@ -138,6 +141,27 @@ data _⊢_ : Context → Type → Set where
       -------------
     → Γ ⊢ C
 
+  -- begin
+  -- sums
+
+  `inj₁ : ∀ {Γ A B}
+    → Γ ⊢ A
+      ----------
+    → Γ ⊢ A `⊎ B
+
+  `inj₂ : ∀ {Γ A B}
+    → Γ ⊢ B
+      ----------
+    → Γ ⊢ A `⊎ B
+
+  case⊎ : ∀ {Γ A B C}
+    → Γ ⊢ A `⊎ B
+    → Γ , A ⊢ C
+    → Γ , B ⊢ C
+      ---------
+    → Γ ⊢ C
+  -- end
+
 -- Abbreviating de Bruijn indices
 
 lookup : Context → ℕ → Type
@@ -162,20 +186,25 @@ ext ρ Z     = Z
 ext ρ (S x) = S (ρ x)
 
 rename : ∀ {Γ Δ} → (∀ {A} → Γ ∋ A → Δ ∋ A) → (∀ {A} → Γ ⊢ A → Δ ⊢ A)
-rename ρ (` x)        = ` (ρ x)
-rename ρ (ƛ N)        = ƛ rename (ext ρ) N
-rename ρ (L · M)      = (rename ρ L) · (rename ρ M)
-rename ρ `zero        = `zero
-rename ρ (`suc M)     = `suc (rename ρ M)
-rename ρ (case L M N) = case (rename ρ L) (rename ρ M) (rename (ext ρ) N)
-rename ρ (μ N)        = μ (rename (ext ρ) N)
-rename ρ (con n)      = con n
-rename ρ (M `* N)     = (rename ρ M) `* (rename ρ N)
-rename ρ (`let M N)   = `let (rename ρ M) (rename (ext ρ) N)
-rename ρ `⟨ M , N ⟩   = `⟨ (rename ρ M) , (rename ρ N) ⟩
-rename ρ (`proj₁ L)   = `proj₁ (rename ρ L)
-rename ρ (`proj₂ L)   = `proj₂ (rename ρ L)
-rename ρ (case× L M)  = case× (rename ρ L) (rename (ext (ext ρ)) M)
+rename ρ (` x)         = ` (ρ x)
+rename ρ (ƛ N)         = ƛ rename (ext ρ) N
+rename ρ (L · M)       = (rename ρ L) · (rename ρ M)
+rename ρ `zero         = `zero
+rename ρ (`suc M)      = `suc (rename ρ M)
+rename ρ (case L M N)  = case (rename ρ L) (rename ρ M) (rename (ext ρ) N)
+rename ρ (μ N)         = μ (rename (ext ρ) N)
+rename ρ (con n)       = con n
+rename ρ (M `* N)      = (rename ρ M) `* (rename ρ N)
+rename ρ (`let M N)    = `let (rename ρ M) (rename (ext ρ) N)
+rename ρ `⟨ M , N ⟩    = `⟨ (rename ρ M) , (rename ρ N) ⟩
+rename ρ (`proj₁ L)    = `proj₁ (rename ρ L)
+rename ρ (`proj₂ L)    = `proj₂ (rename ρ L)
+rename ρ (case× L M)   = case× (rename ρ L) (rename (ext (ext ρ)) M)
+-- begin
+rename ρ (`inj₁ L)     = `inj₁ (rename ρ L)
+rename ρ (`inj₂ L)     = `inj₂ (rename ρ L)
+rename ρ (case⊎ L M N) = case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N)
+-- end
 
 -- Simultanous substitution
 
@@ -184,20 +213,25 @@ exts σ Z     = ` Z
 exts σ (S x) = rename S_ (σ x)
 
 subst : ∀ {Γ Δ} → (∀ {C} → Γ ∋ C → Δ ⊢ C) → (∀ {C} → Γ ⊢ C → Δ ⊢ C)
-subst σ (` k)        = σ k
-subst σ (ƛ N)        = ƛ (subst (exts σ) N)
-subst σ (L · M)      = (subst σ L) · (subst σ M)
-subst σ `zero        = `zero
-subst σ (`suc M)     = `suc (subst σ M)
-subst σ (case L M N) = case (subst σ L) (subst σ M) (subst (exts σ) N)
-subst σ (μ N)        = μ (subst (exts σ) N)
-subst σ (con n)      = con n
-subst σ (M `* N)     = (subst σ M) `* (subst σ N)
-subst σ (`let M N)   = `let (subst σ M) (subst (exts σ) N)
-subst σ `⟨ M , N ⟩   = `⟨ (subst σ M) , (subst σ N) ⟩
-subst σ (`proj₁ L)   = `proj₁ (subst σ L)
-subst σ (`proj₂ L)   = `proj₂ (subst σ L)
-subst σ (case× L M)  = case× (subst σ L) (subst (exts (exts σ)) M)
+subst σ (` k)         = σ k
+subst σ (ƛ N)         = ƛ (subst (exts σ) N)
+subst σ (L · M)       = (subst σ L) · (subst σ M)
+subst σ `zero         = `zero
+subst σ (`suc M)      = `suc (subst σ M)
+subst σ (case L M N)  = case (subst σ L) (subst σ M) (subst (exts σ) N)
+subst σ (μ N)         = μ (subst (exts σ) N)
+subst σ (con n)       = con n
+subst σ (M `* N)      = (subst σ M) `* (subst σ N)
+subst σ (`let M N)    = `let (subst σ M) (subst (exts σ) N)
+subst σ `⟨ M , N ⟩    = `⟨ (subst σ M) , (subst σ N) ⟩
+subst σ (`proj₁ L)    = `proj₁ (subst σ L)
+subst σ (`proj₂ L)    = `proj₂ (subst σ L)
+subst σ (case× L M)   = case× (subst σ L) (subst (exts (exts σ)) M)
+-- begin
+subst σ (`inj₁ L)     = `inj₁ (subst σ L)
+subst σ (`inj₂ L)     = `inj₂ (subst σ L)
+subst σ (case⊎ L M N) = case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
+-- end
 
 -- Single and double substitution
 
@@ -254,6 +288,19 @@ data Value : ∀ {Γ A} → Γ ⊢ A → Set where
     → Value W
       ----------------
     → Value `⟨ V , W ⟩
+
+  -- begin
+  -- sums
+  V-inj₁ : ∀ {Γ A B} {V : Γ ⊢ A}
+    → Value V
+      -----------------------
+    → Value (`inj₁ {B = B} V)
+
+  V-inj₂ : ∀ {Γ A B} {W : Γ ⊢ B}
+    → Value W
+      -----------------------
+    → Value (`inj₂ {A = A} W)
+  -- end
 
 -- Reduction
 
@@ -376,6 +423,34 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
       ----------------------------------
     → case× `⟨ V , W ⟩ M —→ M [ V ][ W ]
 
+  -- begin
+  -- sums
+  ξ-inj₁ : ∀ {Γ A B} {M M′ : Γ ⊢ A}
+    → M —→ M′
+      ---------------------------
+    → `inj₁ {B = B} M —→ `inj₁ M′
+
+  ξ-inj₂ : ∀ {Γ A B} {N N′ : Γ ⊢ B}
+    → N —→ N′
+      ---------------------------
+    → `inj₂ {A = A} N —→ `inj₂ N′
+
+  ξ-case⊎ : ∀ {Γ A B C} {L L′ : Γ ⊢ A `⊎ B} {M : Γ , A ⊢ C} {N : Γ , B ⊢ C}
+    → L —→ L′
+      ---------------------------
+    → case⊎ L M N —→ case⊎ L′ M N
+
+  β-inj₁ : ∀ {Γ A B C} {V : Γ ⊢ A} {M : Γ , A ⊢ C} {N : Γ , B ⊢ C}
+    → Value V
+      ------------------------------
+    → case⊎ (`inj₁ V) M N —→ M [ V ]
+
+  β-inj₂ : ∀ {Γ A B C} {W : Γ ⊢ B} {M : Γ , A ⊢ C} {N : Γ , B ⊢ C}
+    → Value W
+      ------------------------------
+    → case⊎ (`inj₂ W) M N —→ N [ W ]
+  -- end
+
 -- Reflexive and transitive closure
 
 infix  2 _—↠_
@@ -409,6 +484,8 @@ V¬—→ : ∀ {Γ A} {M N : Γ ⊢ A}
 V¬—→ (V-suc VM)    (ξ-suc M—→N)    = V¬—→ VM M—→N
 V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₁ L—→N)   = V¬—→ VL L—→N
 V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₂ _ M—→N) = V¬—→ VM M—→N
+V¬—→ (V-inj₁ VL) (ξ-inj₁ L—→M)     = V¬—→ VL L—→M
+V¬—→ (V-inj₂ VL) (ξ-inj₂ L—→M)     = V¬—→ VL L—→M
 
 -- Progress
 
@@ -427,44 +504,54 @@ progress : ∀ {A}
   → (M : ∅ ⊢ A)
     -----------
   → Progress M
-progress (ƛ N)                       = done V-ƛ
+progress (ƛ N)                         = done V-ƛ
 progress (L · M) with progress L
-... | step L—→L′                     = step (ξ-·₁ L—→L′)
+... | step L—→L′                       = step (ξ-·₁ L—→L′)
 ... | done V-ƛ with progress M
-...   | step M—→M′                   = step (ξ-·₂ V-ƛ M—→M′)
-...   | done VM                      = step (β-ƛ VM)
+...   | step M—→M′                     = step (ξ-·₂ V-ƛ M—→M′)
+...   | done VM                        = step (β-ƛ VM)
 progress `zero = done V-zero
 progress (`suc M) with progress M
-... | step M—→M′                     = step (ξ-suc M—→M′)
-... | done VM                        = done (V-suc VM)
+... | step M—→M′                       = step (ξ-suc M—→M′)
+... | done VM                          = done (V-suc VM)
 progress (case L M N) with progress L
-... | step L—→L′                     = step (ξ-case L—→L′)
-... | done V-zero                    = step β-zero
-... | done (V-suc VL)                = step (β-suc VL)
-progress (μ M)                       = step β-μ
-progress (con n)                     = done V-con
+... | step L—→L′                       = step (ξ-case L—→L′)
+... | done V-zero                      = step β-zero
+... | done (V-suc VL)                  = step (β-suc VL)
+progress (μ M)                         = step β-μ
+progress (con n)                       = done V-con
 progress (L `* M) with progress L
-... | step L—→L′                     = step (ξ-*₁ L—→L′)
+... | step L—→L′                       = step (ξ-*₁ L—→L′)
 ... | done V-con with progress M
-...   | step M—→M′                   = step (ξ-*₂ V-con M—→M′)
-...   | done V-con                   = step δ-*
+...   | step M—→M′                     = step (ξ-*₂ V-con M—→M′)
+...   | done V-con                     = step δ-*
 progress (`let M N) with progress M
-... | step M—→M′                     = step (ξ-let M—→M′)
-... | done VM                        = step (β-let VM)
+... | step M—→M′                       = step (ξ-let M—→M′)
+... | done VM                          = step (β-let VM)
 progress `⟨ M , N ⟩ with progress M
-... | step M—→M′                     = step (ξ-⟨,⟩₁ M—→M′)
+... | step M—→M′                       = step (ξ-⟨,⟩₁ M—→M′)
 ... | done VM with progress N
-...   | step N—→N′                   = step (ξ-⟨,⟩₂ VM N—→N′)
-...   | done VN                      = done V-⟨ VM , VN ⟩
+...   | step N—→N′                     = step (ξ-⟨,⟩₂ VM N—→N′)
+...   | done VN                        = done V-⟨ VM , VN ⟩
 progress (`proj₁ L) with progress L
-... | step L—→L′                     = step (ξ-proj₁ L—→L′)
-... | done V-⟨ VL , VM ⟩             = step (β-proj₁ VL VM)
+... | step L—→L′                       = step (ξ-proj₁ L—→L′)
+... | done V-⟨ VL , VM ⟩               = step (β-proj₁ VL VM)
 progress (`proj₂ L) with progress L
-... | step L—→L′                     = step (ξ-proj₂ L—→L′)
-... | done V-⟨ VL , VM ⟩             = step (β-proj₂ VL VM)
+... | step L—→L′                       = step (ξ-proj₂ L—→L′)
+... | done V-⟨ VL , VM ⟩               = step (β-proj₂ VL VM)
 progress (case× L M) with progress L
-... | step L—→L′                     = step (ξ-case× L—→L′)
-... | done V-⟨ VL , VM ⟩             = step (β-case× VL VM)
+... | step L—→L′                       = step (ξ-case× L—→L′)
+... | done V-⟨ VL , VM ⟩               = step (β-case× VL VM)
+progress (`inj₁ L) with progress L
+... | step L—→L′                       = step (ξ-inj₁ L—→L′)
+... | done VL                          = done (V-inj₁ VL)
+progress (`inj₂ L) with progress L
+... | step L—→L′                       = step (ξ-inj₂ L—→L′)
+... | done VL                          = done (V-inj₂ VL)
+progress (case⊎ L M N) with progress L
+... | step L—→L′                       = step (ξ-case⊎ L—→L′)
+... | done (V-inj₁ VL)                 = step (β-inj₁ VL)
+... | done (V-inj₂ VL)                 = step (β-inj₂ VL)
 
 -- Evaluation
 
@@ -571,3 +658,21 @@ _ =
    —→⟨ β-case× V-con V-zero ⟩
      `⟨ `zero , con 42 ⟩
    ∎
+
+-- begin
+swap⊎ : ∀ {A B} → ∅ ⊢ A `⊎ B ⇒ B `⊎ A
+swap⊎ = ƛ case⊎ (# 0) (`inj₂ (# 0)) (`inj₁ (# 0))
+
+_ : swap⊎ · `inj₁ {B = `ℕ} (con 12) —↠ `inj₂ {A = `ℕ} (con 12)
+_ =
+  begin
+    swap⊎ · `inj₁ (con 12)
+  —→⟨ β-ƛ (V-inj₁ V-con) ⟩
+    case⊎ (`inj₁ (con 12)) (`inj₂ (# 0)) (`inj₁ (# 0))
+  —→⟨ β-inj₁ V-con ⟩
+    `inj₂ (con 12)
+  ∎
+-- end
+
+-- Exercise: More
+-- See code within "-- begin" and "--end" above.
