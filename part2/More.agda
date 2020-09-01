@@ -132,7 +132,7 @@ data _⊢_ : Context → Type → Set where
 
   -- alternative formulation of products
 
-  casex : ∀ {Γ A B C}
+  case× : ∀ {Γ A B C}
     → Γ ⊢ A `× B
     → Γ , A , B ⊢ C
       -------------
@@ -175,7 +175,7 @@ rename ρ (`let M N)   = `let (rename ρ M) (rename (ext ρ) N)
 rename ρ `⟨ M , N ⟩   = `⟨ (rename ρ M) , (rename ρ N) ⟩
 rename ρ (`proj₁ L)   = `proj₁ (rename ρ L)
 rename ρ (`proj₂ L)   = `proj₂ (rename ρ L)
-rename ρ (casex L M)  = casex (rename ρ L) (rename (ext (ext ρ)) M)
+rename ρ (case× L M)  = case× (rename ρ L) (rename (ext (ext ρ)) M)
 
 -- Simultanous substitution
 
@@ -197,7 +197,7 @@ subst σ (`let M N)   = `let (subst σ M) (subst (exts σ) N)
 subst σ `⟨ M , N ⟩   = `⟨ (subst σ M) , (subst σ N) ⟩
 subst σ (`proj₁ L)   = `proj₁ (subst σ L)
 subst σ (`proj₂ L)   = `proj₂ (subst σ L)
-subst σ (casex L M)  = casex (subst σ L) (subst (exts (exts σ)) M)
+subst σ (case× L M)  = case× (subst σ L) (subst (exts (exts σ)) M)
 
 -- Single and double substitution
 
@@ -336,6 +336,7 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → `⟨ M , N ⟩ —→ `⟨ M′ , N ⟩
 
   ξ-⟨,⟩₂ : ∀ {Γ A B} {V : Γ ⊢ A} {N N′ : Γ ⊢ B}
+    → Value V
     → N —→ N′
       -------------------------
     → `⟨ V , N ⟩ —→ `⟨ V , N′ ⟩
@@ -364,16 +365,16 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 
   -- alternative formulation of products
 
-  ξ-casex : ∀ {Γ A B C} {L L′ : Γ ⊢ A `× B} {M : Γ , A , B ⊢ C}
+  ξ-case× : ∀ {Γ A B C} {L L′ : Γ ⊢ A `× B} {M : Γ , A , B ⊢ C}
     → L —→ L′
       -----------------------
-    → casex L M —→ casex L′ M
+    → case× L M —→ case× L′ M
 
-  β-casex : ∀ {Γ A B C} {V : Γ ⊢ A} {W : Γ ⊢ B} {M : Γ , A , B ⊢ C}
+  β-case× : ∀ {Γ A B C} {V : Γ ⊢ A} {W : Γ ⊢ B} {M : Γ , A , B ⊢ C}
     → Value V
     → Value W
       ----------------------------------
-    → casex `⟨ V , W ⟩ M —→ M [ V ][ W ]
+    → case× `⟨ V , W ⟩ M —→ M [ V ][ W ]
 
 -- Reflexive and transitive closure
 
@@ -405,9 +406,9 @@ V¬—→ : ∀ {Γ A} {M N : Γ ⊢ A}
   → Value M
     ----------
   → ¬ (M —→ N)
-V¬—→ (V-suc VM)    (ξ-suc M—→N)  = V¬—→ VM M—→N
-V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₁ L—→N) = V¬—→ VL L—→N
-V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₂ M—→N) = V¬—→ VM M—→N
+V¬—→ (V-suc VM)    (ξ-suc M—→N)    = V¬—→ VM M—→N
+V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₁ L—→N)   = V¬—→ VL L—→N
+V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₂ _ M—→N) = V¬—→ VM M—→N
 
 -- Progress
 
@@ -453,7 +454,7 @@ progress (`let M N) with progress M
 progress `⟨ M , N ⟩ with progress M
 ... | step M—→M′                     = step (ξ-⟨,⟩₁ M—→M′)
 ... | done VM with progress N
-...   | step N—→N′                   = step (ξ-⟨,⟩₂ N—→N′)
+...   | step N—→N′                   = step (ξ-⟨,⟩₂ VM N—→N′)
 ...   | done VN                      = done V-⟨ VM , VN ⟩
 progress (`proj₁ L) with progress L
 ... | step L—→L′                     = step (ξ-proj₁ L—→L′)
@@ -461,9 +462,9 @@ progress (`proj₁ L) with progress L
 progress (`proj₂ L) with progress L
 ... | step L—→L′                     = step (ξ-proj₂ L—→L′)
 ... | done V-⟨ VL , VM ⟩             = step (β-proj₂ VL VM)
-progress (casex L M) with progress L
-... | step L—→L′                     = step (ξ-casex L—→L′)
-... | done V-⟨ VL , VM ⟩             = step (β-casex VL VM)
+progress (case× L M) with progress L
+... | step L—→L′                     = step (ξ-case× L—→L′)
+... | done V-⟨ VL , VM ⟩             = step (β-case× VL VM)
 
 -- Evaluation
 
@@ -499,3 +500,74 @@ eval (gas (suc m)) L with progress L
 ... | done VL                           = steps (L ∎) (done VL)
 ... | step {M} L—→M with eval (gas m) M
 ...   | steps M—↠N fin                  = steps (L —→⟨ L—→M ⟩ M—↠N) fin
+
+-- Examples
+cube : ∅ ⊢ Nat ⇒ Nat
+cube = ƛ (# 0 `* # 0 `* # 0)
+
+_ : cube · con 2 —↠ con 8
+_ = begin
+      cube · con 2
+    —→⟨ β-ƛ V-con ⟩
+      con 2 `* con 2 `* con 2
+    —→⟨ ξ-*₁ δ-* ⟩
+      con 4 `* con 2
+    —→⟨ δ-* ⟩
+      con 8
+    ∎
+
+exp10 : ∅ ⊢ Nat ⇒ Nat
+exp10 = ƛ (`let (# 0 `* # 0)
+            (`let (# 0 `* # 0)
+              (`let (# 0 `* # 2)
+                (# 0 `* # 0))))
+
+_ : exp10 · con 2 —↠ con 1024
+_ =
+  begin
+    exp10 · con 2
+  —→⟨ β-ƛ V-con ⟩
+    `let (con 2 `* con 2) (`let (# 0 `* # 0) (`let (# 0 `* con 2) (# 0 `* # 0)))
+  —→⟨ ξ-let δ-* ⟩
+    `let (con 4) (`let (# 0 `* # 0) (`let (# 0 `* con 2) (# 0 `* # 0)))
+  —→⟨ β-let V-con ⟩
+    `let (con 4 `* con 4) (`let (# 0 `* con 2) (# 0 `* # 0))
+  —→⟨ ξ-let δ-* ⟩
+    `let (con 16) (`let (# 0 `* con 2) (# 0 `* # 0))
+  —→⟨ β-let V-con ⟩
+    `let (con 16 `* con 2) (# 0 `* # 0)
+  —→⟨ ξ-let δ-* ⟩
+    `let (con 32) (# 0 `* # 0)
+  —→⟨ β-let V-con ⟩
+    con 32 `* con 32
+  —→⟨ δ-* ⟩
+    con 1024
+  ∎
+
+swap× : ∀ {A B} → ∅ ⊢ A `× B ⇒ B `× A
+swap× = ƛ `⟨ `proj₂ (# 0) , `proj₁ (# 0) ⟩
+
+_ : swap× · `⟨ con 42 , `zero ⟩ —↠ `⟨ `zero , con 42 ⟩
+_ =
+  begin
+    swap× · `⟨ con 42 , `zero ⟩
+  —→⟨ β-ƛ V-⟨ V-con , V-zero ⟩ ⟩
+    `⟨ `proj₂ `⟨ con 42 , `zero ⟩ , `proj₁ `⟨ con 42 , `zero ⟩ ⟩
+  —→⟨ ξ-⟨,⟩₁ (β-proj₂ V-con V-zero) ⟩
+    `⟨ `zero , `proj₁ `⟨ con 42 , `zero ⟩ ⟩
+  —→⟨ ξ-⟨,⟩₂ V-zero (β-proj₁ V-con V-zero) ⟩
+    `⟨ `zero , con 42 ⟩
+  ∎
+
+swap×-case : ∀ {A B} → ∅ ⊢ A `× B ⇒ B `× A
+swap×-case = ƛ case× (# 0) `⟨ # 0 , # 1 ⟩
+
+_ : swap×-case · `⟨ con 42 , `zero ⟩ —↠ `⟨ `zero , con 42 ⟩
+_ =
+  begin
+     swap×-case · `⟨ con 42 , `zero ⟩
+   —→⟨ β-ƛ V-⟨ V-con , V-zero ⟩ ⟩
+     case× `⟨ con 42 , `zero ⟩ `⟨ # 0 , # 1 ⟩
+   —→⟨ β-case× V-con V-zero ⟩
+     `⟨ `zero , con 42 ⟩
+   ∎
