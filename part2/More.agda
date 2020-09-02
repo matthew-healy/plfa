@@ -31,6 +31,7 @@ data Type : Set where
   _`×_ : Type → Type → Type
   -- begin
   _`⊎_ : Type → Type → Type
+  `⊤   : Type
   -- end
 
 -- Contexts
@@ -160,6 +161,11 @@ data _⊢_ : Context → Type → Set where
     → Γ , B ⊢ C
       ---------
     → Γ ⊢ C
+
+  -- unit type
+  `tt : ∀ {Γ}
+      ---------
+    → Γ ⊢ `⊤
   -- end
 
 -- Abbreviating de Bruijn indices
@@ -204,6 +210,7 @@ rename ρ (case× L M)   = case× (rename ρ L) (rename (ext (ext ρ)) M)
 rename ρ (`inj₁ L)     = `inj₁ (rename ρ L)
 rename ρ (`inj₂ L)     = `inj₂ (rename ρ L)
 rename ρ (case⊎ L M N) = case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N)
+rename ρ `tt           = `tt
 -- end
 
 -- Simultanous substitution
@@ -231,6 +238,7 @@ subst σ (case× L M)   = case× (subst σ L) (subst (exts (exts σ)) M)
 subst σ (`inj₁ L)     = `inj₁ (subst σ L)
 subst σ (`inj₂ L)     = `inj₂ (subst σ L)
 subst σ (case⊎ L M N) = case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
+subst σ `tt           = `tt
 -- end
 
 -- Single and double substitution
@@ -300,6 +308,11 @@ data Value : ∀ {Γ A} → Γ ⊢ A → Set where
     → Value W
       -----------------------
     → Value (`inj₂ {A = A} W)
+
+  -- unit type
+  V-tt : ∀ {Γ}
+      ---------------
+    → Value (`tt {Γ})
   -- end
 
 -- Reduction
@@ -484,8 +497,8 @@ V¬—→ : ∀ {Γ A} {M N : Γ ⊢ A}
 V¬—→ (V-suc VM)    (ξ-suc M—→N)    = V¬—→ VM M—→N
 V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₁ L—→N)   = V¬—→ VL L—→N
 V¬—→ V-⟨ VL , VM ⟩ (ξ-⟨,⟩₂ _ M—→N) = V¬—→ VM M—→N
-V¬—→ (V-inj₁ VL) (ξ-inj₁ L—→M)     = V¬—→ VL L—→M
-V¬—→ (V-inj₂ VL) (ξ-inj₂ L—→M)     = V¬—→ VL L—→M
+V¬—→ (V-inj₁ VL)   (ξ-inj₁ L—→M)   = V¬—→ VL L—→M
+V¬—→ (V-inj₂ VL)   (ξ-inj₂ L—→M)   = V¬—→ VL L—→M
 
 -- Progress
 
@@ -542,6 +555,7 @@ progress (`proj₂ L) with progress L
 progress (case× L M) with progress L
 ... | step L—→L′                       = step (ξ-case× L—→L′)
 ... | done V-⟨ VL , VM ⟩               = step (β-case× VL VM)
+-- begin
 progress (`inj₁ L) with progress L
 ... | step L—→L′                       = step (ξ-inj₁ L—→L′)
 ... | done VL                          = done (V-inj₁ VL)
@@ -552,6 +566,8 @@ progress (case⊎ L M N) with progress L
 ... | step L—→L′                       = step (ξ-case⊎ L—→L′)
 ... | done (V-inj₁ VL)                 = step (β-inj₁ VL)
 ... | done (V-inj₂ VL)                 = step (β-inj₂ VL)
+progress `tt                           = done V-tt
+-- end
 
 -- Evaluation
 
@@ -672,6 +688,23 @@ _ =
   —→⟨ β-inj₁ V-con ⟩
     `inj₂ (con 12)
   ∎
+
+to×⊤ : ∀ {A} → ∅ ⊢ A ⇒ A `× `⊤
+to×⊤ = ƛ `⟨ # 0 , `tt ⟩
+
+from×⊤ : ∀ {A} → ∅ ⊢ A `× `⊤ ⇒ A
+from×⊤ = ƛ `proj₁ (# 0)
+
+_ : from×⊤ · (to×⊤ · (con 5)) —↠ (con 5)
+_ = begin
+      from×⊤ · (to×⊤ · (con 5))
+    —→⟨ ξ-·₂ V-ƛ (β-ƛ V-con) ⟩
+      from×⊤ · `⟨ (con 5) , `tt ⟩
+    —→⟨ β-ƛ V-⟨ V-con , V-tt ⟩ ⟩
+      `proj₁ `⟨ (con 5) , `tt ⟩
+    —→⟨ β-proj₁ V-con V-tt ⟩
+      (con 5)
+    ∎
 -- end
 
 -- Exercise: More
