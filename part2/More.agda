@@ -32,6 +32,7 @@ data Type : Set where
   -- begin
   _`⊎_ : Type → Type → Type
   `⊤   : Type
+  `⊥   : Type
   -- end
 
 -- Contexts
@@ -169,9 +170,17 @@ data _⊢_ : Context → Type → Set where
     → Γ ⊢ `⊤
 
   -- alternative forumlation of unit type
+
   case⊤ : ∀ {Γ A}
     → Γ ⊢ `⊤
     → Γ ⊢ A
+      -------
+    → Γ ⊢ A
+
+  -- empty type
+
+  case⊥ : ∀ {Γ A}
+    → Γ ⊢ `⊥
       -------
     → Γ ⊢ A
 
@@ -220,7 +229,8 @@ rename ρ (`inj₁ L)     = `inj₁ (rename ρ L)
 rename ρ (`inj₂ L)     = `inj₂ (rename ρ L)
 rename ρ (case⊎ L M N) = case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N)
 rename ρ `tt           = `tt
-rename ρ (case⊤ L M)  = rename ρ M
+rename ρ (case⊤ L M)   = rename ρ M
+rename ρ (case⊥ L)     = case⊥ (rename ρ L)
 -- end
 
 -- Simultanous substitution
@@ -249,7 +259,8 @@ subst σ (`inj₁ L)     = `inj₁ (subst σ L)
 subst σ (`inj₂ L)     = `inj₂ (subst σ L)
 subst σ (case⊎ L M N) = case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
 subst σ `tt           = `tt
-subst σ (case⊤ L M)  = subst σ M
+subst σ (case⊤ L M)   = subst σ M
+subst σ (case⊥ L)     = case⊥ (subst σ L)
 -- end
 
 -- Single and double substitution
@@ -485,6 +496,13 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
   β-case⊤ : ∀ {Γ A} {M : Γ ⊢ A}
       ----------------
     → case⊤ `tt M —→ M
+
+  -- empty type
+
+  ξ-case⊥ : ∀ {Γ A} {L L′ : Γ ⊢ `⊥}
+    → L —→ L′
+      ---------------------------
+    → case⊥ {A = A} L —→ case⊥ L′
   -- end
 
 -- Reflexive and transitive closure
@@ -593,6 +611,8 @@ progress `tt                           = done V-tt
 progress (case⊤ L M) with progress L
 ... | step L—→L′                       = step (ξ-case⊤ L—→L′)
 ... | done V-tt                        = step β-case⊤
+progress (case⊥ L) with progress L
+... | step L—→L′                       = step (ξ-case⊥ L—→L′)
 -- end
 
 -- Evaluation
@@ -744,6 +764,23 @@ _ = begin
       case× (# 0) (case⊤ (# 0) (# 1)) [ `⟨ con 0 , `tt ⟩ ]
     —→⟨ β-case× V-con V-tt ⟩
       con 0
+    ∎
+
+to⊎⊥ : ∀ {A} → ∅ ⊢ A ⇒ A `⊎ `⊥
+to⊎⊥ = ƛ `inj₁ (# 0)
+
+from⊎⊥ : ∀ {A} → ∅ ⊢ A `⊎ `⊥ ⇒ A
+from⊎⊥ = ƛ case⊎ (# 0) (# 0) (case⊥ (# 0))
+
+_ : from⊎⊥ · (to⊎⊥ · (con 1)) —↠ (con 1)
+_ = begin
+      from⊎⊥ · (to⊎⊥ · (con 1))
+    —→⟨ ξ-·₂ V-ƛ (β-ƛ V-con) ⟩
+      from⊎⊥ · (`inj₁ (con 1))
+    —→⟨ β-ƛ (V-inj₁ V-con) ⟩
+      case⊎ (`inj₁ (con 1)) (# 0) (case⊥ (# 0))
+    —→⟨ β-inj₁ V-con ⟩
+      (con 1)
     ∎
 -- end
 
